@@ -1,0 +1,115 @@
+"""Load and validate ability data and user settings."""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_ABILITIES = ROOT / "data" / "abilities.json"
+DEFAULT_SETTINGS = ROOT / "data" / "settings.json"
+
+# Words the command parser owns; aliases may not use them.
+RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their"}
+
+DEFAULT_SETTING_VALUES = {
+    "warn_before_seconds": 3.0,
+    "call_lag_seconds": 0.5,
+    "fire_on_partial": True,
+    "buzz_on_unknown": False,
+    "window_topmost": True,
+}
+
+
+class DataError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class Ability:
+    id: str
+    kind: str  # "cooldown" or "ult"
+    hero: str
+    name: str
+    aliases: tuple[str, ...]
+    cooldown: float = 0.0
+    starts: str = "on_use"
+    effect: float = 0.0
+    tone_hz: float = 700.0
+    speak: bool = False
+
+    @property
+    def recharge_seconds(self) -> float:
+        """Seconds from the moment of use until the ability is ready again."""
+        extra = self.effect if self.starts == "after_effect" else 0.0
+        return self.cooldown + extra
+
+    @property
+    def label(self) -> str:
+        return f"{self.hero} {self.name}"
+
+
+class AbilityData:
+    def __init__(self, abilities: list[Ability]):
+        self.abilities = {a.id: a for a in abilities}
+        self.alias_map: dict[str, str] = {}
+        for a in abilities:
+            for alias in a.aliases:
+                if alias in self.alias_map:
+                    other = self.alias_map[alias]
+                    raise DataError(f"alias '{alias}' used by both {other} and {a.id}")
+                self.alias_map[alias] = a.id
+
+    def get(self, ability_id: str) -> Ability:
+        return self.abilities[ability_id]
+
+
+def _normalize(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _parse_ability(raw: dict) -> Ability:
+    try:
+        aid, kind, hero, name = raw["id"], raw["kind"], raw["hero"], raw["name"]
+        aliases = tuple(_normalize(a) for a in raw["aliases"])
+    except KeyError as e:
+        raise DataError(f"ability {raw.get('id', '?')} missing field {e}") from None
+    if kind not in ("cooldown", "ult"):
+        raise DataError(f"{aid}: kind must be 'cooldown' or 'ult'")
+    if not aliases or any(not a for a in aliases):
+        raise DataError(f"{aid}: needs at least one non-empty alias")
+    for alias in aliases:
+        clash = RESERVED_WORDS.intersection(alias.split())
+        if clash:
+            raise DataError(f"{aid}: alias '{alias}' uses reserved word(s) {sorted(clash)}")
+    starts = raw.get("starts", "on_use")
+    if starts not in ("on_use", "after_effect"):
+        raise DataError(f"{aid}: starts must be 'on_use' or 'after_effect'")
+    cooldown = float(raw.get("cooldown", 0))
+    if kind == "cooldown" and cooldown <= 0:
+        raise DataError(f"{aid}: cooldown abilities need a positive 'cooldown'")
+    return Ability(
+        id=aid, kind=kind, hero=hero, name=name, aliases=aliases,
+        cooldown=cooldown, starts=starts, effect=float(raw.get("effect", 0)),
+        tone_hz=float(raw.get("tone_hz", 700)), speak=bool(raw.get("speak", False)),
+    )
+
+
+def load_abilities(path: Path | str = DEFAULT_ABILITIES) -> AbilityData:
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    ids = [a.get("id") for a in raw["abilities"]]
+    if len(ids) != len(set(ids)):
+        raise DataError("duplicate ability ids")
+    return AbilityData([_parse_ability(a) for a in raw["abilities"]])
+
+
+def load_settings(path: Path | str = DEFAULT_SETTINGS) -> dict:
+    settings = dict(DEFAULT_SETTING_VALUES)
+    p = Path(path)
+    if p.exists():
+        user = json.loads(p.read_text(encoding="utf-8"))
+        unknown = set(user) - set(settings)
+        if unknown:
+            raise DataError(f"unknown settings: {sorted(unknown)}")
+        settings.update(user)
+    return settings

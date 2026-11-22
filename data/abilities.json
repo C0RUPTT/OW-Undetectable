@@ -1,0 +1,20 @@
+{
+  "_note": "Cooldown values are starting estimates and are NOT verified against the current patch. Check each one in-game (practice range / custom game) and edit here. 'starts' is 'on_use' or 'after_effect' (then 'effect' seconds are added).",
+  "abilities": [
+    {"id": "ana_sleep",    "kind": "cooldown", "hero": "Ana",        "name": "Sleep Dart",      "aliases": ["sleep"],  "cooldown": 14, "starts": "on_use", "tone_hz": 523, "speak": true},
+    {"id": "ana_nade",     "kind": "cooldown", "hero": "Ana",        "name": "Biotic Grenade",  "aliases": ["nade"],   "cooldown": 10, "starts": "on_use", "tone_hz": 659},
+    {"id": "kiriko_suzu",  "kind": "cooldown", "hero": "Kiriko",     "name": "Protection Suzu", "aliases": ["suzu"],   "cooldown": 15, "starts": "on_use", "tone_hz": 784},
+    {"id": "bap_lamp",     "kind": "cooldown", "hero": "Baptiste",   "name": "Immortality Field","aliases": ["lamp"],  "cooldown": 25, "starts": "on_use", "tone_hz": 880},
+    {"id": "lw_grip",      "kind": "cooldown", "hero": "Lifeweaver", "name": "Life Grip",       "aliases": ["grip"],   "cooldown": 19, "starts": "on_use", "tone_hz": 988},
+    {"id": "mei_cryo",     "kind": "cooldown", "hero": "Mei",        "name": "Cryo-Freeze",     "aliases": ["cryo"],   "cooldown": 12, "starts": "on_use", "tone_hz": 1175},
+
+    {"id": "ana_ult",      "kind": "ult", "hero": "Ana",      "name": "Nano Boost",           "aliases": ["nano"]},
+    {"id": "kiriko_ult",   "kind": "ult", "hero": "Kiriko",   "name": "Kitsune Rush",         "aliases": ["kitsune"]},
+    {"id": "bap_ult",      "kind": "ult", "hero": "Baptiste", "name": "Amplification Matrix", "aliases": ["amp matrix"]},
+    {"id": "lucio_ult",    "kind": "ult", "hero": "Lucio",    "name": "Sound Barrier",        "aliases": ["beat"]},
+    {"id": "zen_ult",      "kind": "ult", "hero": "Zenyatta", "name": "Transcendence",        "aliases": ["trans"]},
+    {"id": "zarya_ult",    "kind": "ult", "hero": "Zarya",    "name": "Graviton Surge",       "aliases": ["grav"]},
+    {"id": "rein_ult",     "kind": "ult", "hero": "Reinhardt","name": "Earthshatter",         "aliases": ["shatter"]},
+    {"id": "genji_ult",    "kind": "ult", "hero": "Genji",    "name": "Dragonblade",          "aliases": ["blade"]}
+  ]
+}

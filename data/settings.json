@@ -1,0 +1,7 @@
+{
+  "warn_before_seconds": 3,
+  "call_lag_seconds": 0.5,
+  "fire_on_partial": true,
+  "buzz_on_unknown": false,
+  "window_topmost": true
+}
