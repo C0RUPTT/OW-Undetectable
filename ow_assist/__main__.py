@@ -8,17 +8,17 @@ import time
 
 from . import commands
 from .data import DEFAULT_ABILITIES, DEFAULT_SETTINGS, load_abilities, load_settings
-from .sounds import SoundPlayer
+from .speech import Speaker
 from .tracker import Tracker
 
 
 class Controller:
-    def __init__(self, data, settings, sound: SoundPlayer, log=print):
+    def __init__(self, data, settings, speaker: Speaker, log=print):
         self.data = data
         self.settings = settings
-        self.sound = sound
+        self.speaker = speaker
         self.log = log
-        self.tracker = Tracker(data, settings["warn_before_seconds"], settings["call_lag_seconds"])
+        self.tracker = Tracker(data, settings["call_lag_seconds"])
         self._lock = threading.Lock()
         self._fired_partial: str | None = None
         self.last_heard = ""
@@ -37,15 +37,13 @@ class Controller:
         self._fired_partial = None
         if cmd and text != already:
             self._run(cmd, text)
-        elif not cmd and text and self.settings["buzz_on_unknown"]:
-            self.sound.unknown()
 
     def _run(self, cmd, text: str) -> None:
         with self._lock:
             events = self.tracker.apply(cmd, time.monotonic())
         self.last_heard = text
         for e in events:
-            self.sound.handle(e)
+            self.speaker.handle(e)
             self.log(f"[{e.kind}] {text}")
 
     def tick(self):
@@ -54,20 +52,20 @@ class Controller:
             events = self.tracker.poll(now)
             status = self.tracker.status(now)
         for e in events:
-            self.sound.handle(e)
+            self.speaker.handle(e)
             self.log(f"[{e.kind}] {self.data.get(e.ability_id).label}")
         return status, self.last_heard
 
     def shutdown(self) -> None:
-        self.sound.close()
+        self.speaker.close()
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="ow_assist", description="Voice-driven cooldown tracker")
     p.add_argument("--model", help="path to an unzipped Vosk model folder")
     p.add_argument("--text", action="store_true", help="type commands instead of speaking (testing)")
-    p.add_argument("--no-ui", action="store_true", help="audio cues only, no window")
-    p.add_argument("--no-sound", action="store_true")
+    p.add_argument("--window", action="store_true", help="also show the status window (ult timers)")
+    p.add_argument("--mute", action="store_true", help="no speech (testing)")
     p.add_argument("--device", help="microphone device name or index (see --list-devices)")
     p.add_argument("--list-devices", action="store_true")
     p.add_argument("--abilities", default=str(DEFAULT_ABILITIES))
@@ -83,7 +81,7 @@ def main(argv=None) -> int:
 
     data = load_abilities(args.abilities)
     settings = load_settings(args.settings)
-    controller = Controller(data, settings, SoundPlayer(data, enabled=not args.no_sound))
+    controller = Controller(data, settings, Speaker(data, enabled=not args.mute, rate=settings["speech_rate"]))
 
     if args.text:
         def read_stdin():
@@ -99,7 +97,7 @@ def main(argv=None) -> int:
         VoiceListener(args.model, commands.grammar(data), controller.on_text, device).start()
         print("Listening. Say an alias, 'cancel <alias>', 'undo', or 'new round'.")
 
-    if args.no_ui:
+    if not args.window:
         try:
             while True:
                 controller.tick()

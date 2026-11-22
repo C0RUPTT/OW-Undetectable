@@ -43,7 +43,7 @@ class StatusWindow:
         if status.cooldowns:
             tk.Label(self.body, text="DOWN", bg=BG, fg=DIM, font=("Segoe UI", 9)).pack(anchor="w")
             for ability, remaining in status.cooldowns:
-                color = HOT if remaining <= self.controller.tracker.warn_before else FG
+                color = HOT if remaining <= 3 else FG
                 self._row(ability.label, f"{remaining:4.1f}s", color)
         if status.ults:
             tk.Label(self.body, text="ULTS USED", bg=BG, fg=DIM,

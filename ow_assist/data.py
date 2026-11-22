@@ -13,10 +13,9 @@ DEFAULT_SETTINGS = ROOT / "data" / "settings.json"
 RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their"}
 
 DEFAULT_SETTING_VALUES = {
-    "warn_before_seconds": 3.0,
     "call_lag_seconds": 0.5,
     "fire_on_partial": True,
-    "buzz_on_unknown": False,
+    "speech_rate": 230,
     "window_topmost": True,
 }
 
@@ -35,14 +34,18 @@ class Ability:
     cooldown: float = 0.0
     starts: str = "on_use"
     effect: float = 0.0
-    tone_hz: float = 700.0
-    speak: bool = False
+    custom_callout: str | None = None
 
     @property
     def recharge_seconds(self) -> float:
         """Seconds from the moment of use until the ability is ready again."""
         extra = self.effect if self.starts == "after_effect" else 0.0
         return self.cooldown + extra
+
+    @property
+    def callout(self) -> str:
+        """What gets said when this cooldown is back."""
+        return self.custom_callout or f"{self.aliases[0]} is up"
 
     @property
     def label(self) -> str:
@@ -91,7 +94,7 @@ def _parse_ability(raw: dict) -> Ability:
     return Ability(
         id=aid, kind=kind, hero=hero, name=name, aliases=aliases,
         cooldown=cooldown, starts=starts, effect=float(raw.get("effect", 0)),
-        tone_hz=float(raw.get("tone_hz", 700)), speak=bool(raw.get("speak", False)),
+        custom_callout=raw.get("callout"),
     )
 
 

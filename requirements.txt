@@ -1,5 +1,4 @@
-numpy>=1.26
 sounddevice>=0.4.6
 vosk>=0.3.45
-# optional: spoken cues for abilities marked "speak": true
+# text-to-speech for "sleep is up" callouts
 pyttsx3>=2.90
