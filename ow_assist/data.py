@@ -8,9 +8,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ABILITIES = ROOT / "data" / "abilities.json"
 DEFAULT_SETTINGS = ROOT / "data" / "settings.json"
+DEFAULT_HISTORY = ROOT / "userdata" / "history.sqlite3"
 
 # Words the command parser owns; aliases may not use them.
-RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their"}
+RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their",
+                  "gg", "goal", "record"}
 
 DEFAULT_SETTING_VALUES = {
     "call_lag_seconds": 0.5,
@@ -20,6 +22,12 @@ DEFAULT_SETTING_VALUES = {
     "phone_port": 8765,
     "push_to_talk": None,
     "ptt_tail_seconds": 0.3,
+    "game_process": "Overwatch.exe",
+    "warn_after_losses": 2,
+    "stop_after_losses": 3,
+    "long_session_minutes": 120,
+    "session_end_grace_seconds": 120,
+    "session_gap_minutes": 60,
 }
 
 

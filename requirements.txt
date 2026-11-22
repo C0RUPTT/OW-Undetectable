@@ -4,3 +4,5 @@ vosk>=0.3.45
 pyttsx3>=2.90
 # push-to-talk button (only used when push_to_talk is set)
 pynput>=1.7
+# notices when the game opens/closes for session tracking
+psutil>=5.9

@@ -7,14 +7,17 @@ import threading
 import time
 
 from . import commands
-from .data import DEFAULT_ABILITIES, DEFAULT_SETTINGS, load_abilities, load_settings
+from .data import (DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_SETTINGS, load_abilities,
+                   load_settings)
 from .speech import Speaker
 from .tracker import Tracker
 
 
 class Controller:
-    def __init__(self, data, settings, speaker: Speaker, log=print):
+    def __init__(self, data, settings, speaker: Speaker, tilt=None, log=print):
         self.data = data
+        self.tilt = tilt
+        self._undo_owners: list[str] = []  # who handled each undoable action, newest last
         self.settings = settings
         self.speaker = speaker
         self.log = log
@@ -39,33 +42,78 @@ class Controller:
             self._run(cmd, text)
 
     def _run(self, cmd, text: str) -> None:
-        with self._lock:
-            events = self.tracker.apply(cmd, time.monotonic())
         self.last_heard = text
+        if cmd.kind in commands.TILT_KINDS:
+            if self.tilt is None:
+                return
+            with self._lock:
+                lines = self.tilt.handle(cmd, time.time())
+                if cmd.kind == "result":
+                    self._undo_owners.append("tilt")
+            self._say(lines)
+            return
+        with self._lock:
+            if cmd.kind == "undo" and self._undo_owners and self._undo_owners[-1] == "tilt":
+                self._undo_owners.pop()
+                lines = self.tilt.undo()
+                events = []
+            else:
+                if cmd.kind == "undo" and self._undo_owners:
+                    self._undo_owners.pop()
+                events = self.tracker.apply(cmd, time.monotonic())
+                if events[0].kind in ("used", "cancelled", "reset"):
+                    self._undo_owners.append("tracker")
+                lines = []
+        self._say(lines)
         for e in events:
             self.speaker.handle(e)
             self.log(f"[{e.kind}] {text}")
+
+    def _say(self, lines: list[str]) -> None:
+        for line in lines:
+            self.speaker.say(line)
+            self.log(f"[say] {line}")
+
+    def game_started(self) -> None:
+        if self.tilt:
+            with self._lock:
+                self.tilt.start_session(time.time())
+            self.log("[session] game started")
+
+    def game_stopped(self) -> None:
+        if self.tilt:
+            with self._lock:
+                lines = self.tilt.end_session(time.time())
+            self._say(lines)
+            self.log("[session] game closed")
 
     def tick(self):
         with self._lock:
             now = time.monotonic()
             events = self.tracker.poll(now)
             status = self.tracker.status(now)
+            lines = self.tilt.check(time.time()) if self.tilt else []
         for e in events:
             self.speaker.handle(e)
             self.log(f"[{e.kind}] {self.data.get(e.ability_id).label}")
+        self._say(lines)
         return status, self.last_heard
 
     def ult_snapshot(self) -> dict:
         """Ult timers for the phone view, in data-file order so rows don't jump around."""
         with self._lock:
             status = self.tracker.status(time.monotonic())
+            session = self.tilt.snapshot(time.time()) if self.tilt else None
         order = {aid: i for i, aid in enumerate(self.data.abilities)}
         ults = sorted(status.ults, key=lambda x: order[x[0].id])
         return {"ults": [{"id": a.id, "hero": a.hero, "name": a.name, "elapsed": round(e, 2)}
-                         for a, e in ults]}
+                         for a, e in ults],
+                "session": session}
 
     def shutdown(self) -> None:
+        if self.tilt:
+            with self._lock:
+                self.tilt.end_session(time.time())
         self.speaker.close()
 
 
@@ -80,11 +128,18 @@ def main(argv=None) -> int:
     p.add_argument("--list-devices", action="store_true")
     p.add_argument("--abilities", default=str(DEFAULT_ABILITIES))
     p.add_argument("--settings", default=str(DEFAULT_SETTINGS))
+    p.add_argument("--history", default=str(DEFAULT_HISTORY), help="where game results are stored")
+    p.add_argument("--stats", action="store_true", help="print your stats and exit")
     args = p.parse_args(argv)
 
     if args.list_devices:
         import sounddevice as sd
         print(sd.query_devices())
+        return 0
+    if args.stats:
+        from .stats import report
+        from .tilt import Store
+        print(report(Store(args.history).games()))
         return 0
     if not args.text and not args.model:
         p.error("--model is required unless --text is used")
@@ -94,7 +149,16 @@ def main(argv=None) -> int:
     if settings["push_to_talk"]:
         from .ptt import parse_binding
         parse_binding(settings["push_to_talk"])  # fail now, not mid-match
-    controller = Controller(data, settings, Speaker(data, enabled=not args.mute, rate=settings["speech_rate"]))
+    from .tilt import Store, TiltTracker
+    tilt = TiltTracker(Store(args.history), settings["warn_after_losses"],
+                       settings["stop_after_losses"], settings["long_session_minutes"],
+                       settings["session_gap_minutes"])
+    speaker = Speaker(data, enabled=not args.mute, rate=settings["speech_rate"])
+    controller = Controller(data, settings, speaker, tilt)
+
+    from .watcher import GameWatcher
+    GameWatcher(settings["game_process"], controller.game_started, controller.game_stopped,
+                settings["session_end_grace_seconds"]).start()
 
     if args.phone:
         from .phone import PhoneServer

@@ -38,7 +38,11 @@ class Speaker:
 
     def handle(self, event: Event) -> None:
         text = phrase_for(event, self.data)
-        if text and self._q is not None:
+        if text:
+            self.say(text)
+
+    def say(self, text: str) -> None:
+        if self._q is not None:
             self._q.put(text)
 
     def close(self) -> None:

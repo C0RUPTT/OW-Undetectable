@@ -212,3 +212,21 @@ def test_phone_server_serves_page_and_status(data):
             urllib.request.urlopen(base + "/nope")
     finally:
         server.stop()
+
+
+def test_undo_goes_to_most_recent_action(data):
+    from ow_assist.tilt import Store, TiltTracker
+    tilt = TiltTracker(Store(":memory:"))
+    sp = FakeSpeaker()
+    sp.said = []
+    sp.say = sp.said.append
+    settings = {"call_lag_seconds": 0, "fire_on_partial": False}
+    c = Controller(data, settings, sp, tilt, log=lambda *_: None)
+    c.on_text("nade", True)
+    c.on_text("gg loss", True)
+    c.on_text("undo", True)              # removes the loss, not the nade
+    assert tilt.games == [] and len(c.tracker.status(0).cooldowns) == 1
+    c.on_text("undo", True)              # now the nade
+    assert c.tracker.status(0).cooldowns == []
+    assert sp.said == ["Loss logged.", "Removed last loss."]
+    assert c.ult_snapshot()["session"]["active"]
