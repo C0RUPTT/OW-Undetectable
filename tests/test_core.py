@@ -184,3 +184,31 @@ def test_custom_callout(tmp_path):
         {"id": "a", "kind": "cooldown", "hero": "Ana", "name": "Sleep", "aliases": ["sleep"],
          "cooldown": 14, "callout": "sleep ready"}]}))
     assert load_abilities(p).get("a").callout == "sleep ready"
+
+
+def test_ult_snapshot_is_stable_order(data):
+    c, _ = make_controller(data)
+    c.on_text("grav", True)   # zarya_ult comes after ana_ult in the data file
+    c.on_text("nano", True)
+    snap = c.ult_snapshot()
+    assert [u["id"] for u in snap["ults"]] == ["ana_ult", "zarya_ult"]
+    assert snap["ults"][0]["name"] == "Nano Boost" and snap["ults"][0]["elapsed"] >= 0
+
+
+def test_phone_server_serves_page_and_status(data):
+    import urllib.request
+    from ow_assist.phone import PhoneServer
+    c, _ = make_controller(data)
+    c.on_text("grav", True)
+    server = PhoneServer(c.ult_snapshot, port=0, host="127.0.0.1")
+    server.start()
+    try:
+        base = f"http://127.0.0.1:{server.port}"
+        page = urllib.request.urlopen(base + "/").read().decode()
+        assert "Enemy ults used" in page
+        status = json.loads(urllib.request.urlopen(base + "/status").read())
+        assert status["ults"][0]["id"] == "zarya_ult"
+        with pytest.raises(urllib.error.HTTPError):
+            urllib.request.urlopen(base + "/nope")
+    finally:
+        server.stop()

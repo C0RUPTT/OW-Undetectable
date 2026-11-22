@@ -2,5 +2,6 @@
   "call_lag_seconds": 0.5,
   "fire_on_partial": true,
   "speech_rate": 230,
-  "window_topmost": true
+  "window_topmost": true,
+  "phone_port": 8765
 }

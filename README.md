@@ -20,6 +20,23 @@ Other options:
   seeing how long ago each ult was used.
 - `--text` to type commands instead of speaking, and `--mute` to turn off speech
 
+## Phone view (ult timers)
+
+Run with `--phone`. The app prints an address like `http://192.168.1.20:8765`.
+Open it on your phone, which must be on the same Wi-Fi as your PC.
+
+- Each enemy ult you've called shows a live "time since used" counter.
+  It's highlighted orange for the first 15 seconds, so fresh ults stand out.
+- Rows keep a fixed order, so they don't jump around while you glance.
+- "new round" clears the list. "disconnected" means the phone lost the PC.
+- **Windows will ask to allow network access the first time.** Allow it on
+  private networks only.
+- **Set your phone's auto-lock to "never" while playing.** The page can't keep
+  the screen awake by itself, because browsers only allow that on https pages.
+- The page is read-only. It can show the ult timers but can't change anything.
+  Anyone on your Wi-Fi who opens the address could see them too.
+- Change the port with `phone_port` in `data/settings.json`.
+
 ## Commands
 
 | Say | Effect |
@@ -58,6 +75,7 @@ them. Add or remove abilities and aliases.
   faster. Set it to `false` if you get misfires.
 - `speech_rate`: how fast callouts are spoken.
 - `window_topmost`: keeps the optional window above other windows.
+- `phone_port`: the port the phone view uses.
 
 ## Prototype test plan
 

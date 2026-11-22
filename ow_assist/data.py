@@ -17,6 +17,7 @@ DEFAULT_SETTING_VALUES = {
     "fire_on_partial": True,
     "speech_rate": 230,
     "window_topmost": True,
+    "phone_port": 8765,
 }
 
 

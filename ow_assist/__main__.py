@@ -56,6 +56,15 @@ class Controller:
             self.log(f"[{e.kind}] {self.data.get(e.ability_id).label}")
         return status, self.last_heard
 
+    def ult_snapshot(self) -> dict:
+        """Ult timers for the phone view, in data-file order so rows don't jump around."""
+        with self._lock:
+            status = self.tracker.status(time.monotonic())
+        order = {aid: i for i, aid in enumerate(self.data.abilities)}
+        ults = sorted(status.ults, key=lambda x: order[x[0].id])
+        return {"ults": [{"id": a.id, "hero": a.hero, "name": a.name, "elapsed": round(e, 2)}
+                         for a, e in ults]}
+
     def shutdown(self) -> None:
         self.speaker.close()
 
@@ -65,6 +74,7 @@ def main(argv=None) -> int:
     p.add_argument("--model", help="path to an unzipped Vosk model folder")
     p.add_argument("--text", action="store_true", help="type commands instead of speaking (testing)")
     p.add_argument("--window", action="store_true", help="also show the status window (ult timers)")
+    p.add_argument("--phone", action="store_true", help="serve the ult view to your phone")
     p.add_argument("--mute", action="store_true", help="no speech (testing)")
     p.add_argument("--device", help="microphone device name or index (see --list-devices)")
     p.add_argument("--list-devices", action="store_true")
@@ -82,6 +92,12 @@ def main(argv=None) -> int:
     data = load_abilities(args.abilities)
     settings = load_settings(args.settings)
     controller = Controller(data, settings, Speaker(data, enabled=not args.mute, rate=settings["speech_rate"]))
+
+    if args.phone:
+        from .phone import PhoneServer
+        phone = PhoneServer(controller.ult_snapshot, port=settings["phone_port"])
+        phone.start()
+        print(f"Phone view: open {phone.url} on your phone (same Wi-Fi)")
 
     if args.text:
         def read_stdin():
