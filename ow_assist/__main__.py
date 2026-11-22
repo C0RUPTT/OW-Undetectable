@@ -91,6 +91,9 @@ def main(argv=None) -> int:
 
     data = load_abilities(args.abilities)
     settings = load_settings(args.settings)
+    if settings["push_to_talk"]:
+        from .ptt import parse_binding
+        parse_binding(settings["push_to_talk"])  # fail now, not mid-match
     controller = Controller(data, settings, Speaker(data, enabled=not args.mute, rate=settings["speech_rate"]))
 
     if args.phone:
@@ -110,7 +113,14 @@ def main(argv=None) -> int:
     else:
         from .voice import VoiceListener
         device = int(args.device) if args.device and args.device.isdigit() else args.device
-        VoiceListener(args.model, commands.grammar(data), controller.on_text, device).start()
+        ptt = None
+        if settings["push_to_talk"]:
+            from .ptt import ButtonState, PushToTalkGate
+            button = ButtonState(settings["push_to_talk"])
+            button.start()
+            ptt = (PushToTalkGate(tail_seconds=settings["ptt_tail_seconds"]), button.is_held)
+            print(f"Push-to-talk on {settings['push_to_talk']}: hold it while you make a call.")
+        VoiceListener(args.model, commands.grammar(data), controller.on_text, device, ptt).start()
         print("Listening. Say an alias, 'cancel <alias>', 'undo', or 'new round'.")
 
     if not args.window:

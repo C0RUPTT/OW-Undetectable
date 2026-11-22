@@ -20,6 +20,22 @@ Other options:
   seeing how long ago each ult was used.
 - `--text` to type commands instead of speaking, and `--mute` to turn off speech
 
+## Push-to-talk
+
+By default the mic is always listening. To listen only while you hold a button,
+set `push_to_talk` in `data/settings.json`:
+
+- `"mouse:x2"` or `"mouse:x1"`: mouse side buttons (recommended)
+- `"mouse:middle"`
+- `"key:f13"`, `"key:caps_lock"`, `"key:v"` and so on: any key
+- `null`: always listening
+
+Hold the button, say the call, let go. It catches the word even if you start
+talking a moment before pressing.
+
+The button still reaches the game, so **bind one the game doesn't use**. It
+watches the button the same way Discord's push-to-talk does.
+
 ## Phone view (ult timers)
 
 Run with `--phone`. The app prints an address like `http://192.168.1.20:8765`.
@@ -76,6 +92,7 @@ them. Add or remove abilities and aliases.
 - `speech_rate`: how fast callouts are spoken.
 - `window_topmost`: keeps the optional window above other windows.
 - `phone_port`: the port the phone view uses.
+- `push_to_talk`: see above. `ptt_tail_seconds` is how long it keeps listening after you release.
 
 ## Prototype test plan
 

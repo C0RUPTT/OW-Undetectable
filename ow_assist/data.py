@@ -18,6 +18,8 @@ DEFAULT_SETTING_VALUES = {
     "speech_rate": 230,
     "window_topmost": True,
     "phone_port": 8765,
+    "push_to_talk": None,
+    "ptt_tail_seconds": 0.3,
 }
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import queue
 import threading
+import time
 from typing import Callable
 
 SAMPLE_RATE = 16000
@@ -11,7 +12,8 @@ SAMPLE_RATE = 16000
 
 class VoiceListener:
     def __init__(self, model_path: str, phrases: list[str],
-                 on_text: Callable[[str, bool], None], device=None):
+                 on_text: Callable[[str, bool], None], device=None, ptt=None):
+        """ptt: optional (PushToTalkGate, is_held) pair. Without it the mic is always on."""
         from vosk import KaldiRecognizer, Model, SetLogLevel
 
         SetLogLevel(-1)
@@ -19,6 +21,7 @@ class VoiceListener:
         self._rec = KaldiRecognizer(self._model, SAMPLE_RATE, json.dumps(phrases))
         self._on_text = on_text
         self._device = device
+        self._ptt = ptt
         self._audio: queue.Queue[bytes] = queue.Queue()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -43,7 +46,19 @@ class VoiceListener:
                     data = self._audio.get(timeout=0.2)
                 except queue.Empty:
                     continue
-                if self._rec.AcceptWaveform(data):
-                    self._on_text(json.loads(self._rec.Result()).get("text", ""), True)
-                else:
-                    self._on_text(json.loads(self._rec.PartialResult()).get("partial", ""), False)
+                if self._ptt is None:
+                    self._recognize(data)
+                    continue
+                gate, is_held = self._ptt
+                blocks, finalize = gate.feed(data, is_held(), time.monotonic())
+                for block in blocks:
+                    self._recognize(block)
+                if finalize:
+                    self._on_text(json.loads(self._rec.FinalResult()).get("text", ""), True)
+                    self._rec.Reset()
+
+    def _recognize(self, data: bytes) -> None:
+        if self._rec.AcceptWaveform(data):
+            self._on_text(json.loads(self._rec.Result()).get("text", ""), True)
+        else:
+            self._on_text(json.loads(self._rec.PartialResult()).get("partial", ""), False)

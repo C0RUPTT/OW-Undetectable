@@ -3,5 +3,7 @@
   "fire_on_partial": true,
   "speech_rate": 230,
   "window_topmost": true,
-  "phone_port": 8765
+  "phone_port": 8765,
+  "push_to_talk": null,
+  "ptt_tail_seconds": 0.3
 }

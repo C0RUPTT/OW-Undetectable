@@ -2,3 +2,5 @@ sounddevice>=0.4.6
 vosk>=0.3.45
 # text-to-speech for "sleep is up" callouts
 pyttsx3>=2.90
+# push-to-talk button (only used when push_to_talk is set)
+pynput>=1.7
