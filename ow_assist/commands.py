@@ -18,7 +18,7 @@ PERCENTS = {"ten": 10, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "si
 
 @dataclass(frozen=True)
 class Command:
-    # "use", "cancel", "swap", "seen", "undo", "reset", "round", "fight", "status",
+    # "use", "cancel", "swap", "seen", "fed", "undo", "reset", "round", "fight", "status",
     # "result", "goal", "record"
     kind: str
     ability_id: str | None = None
@@ -64,6 +64,8 @@ def parse(text: str, data: AbilityData) -> Command | None:
         aid = data.alias_map.get(rest)
         if last in PERCENTS and aid and data.get(aid).kind == "ult":
             return Command("seen", aid, value=PERCENTS[last])
+        if last == "fed" and aid and data.get(aid).kind == "ult":
+            return Command("fed", aid)
     ability_id = data.alias_map.get(t)
     return Command(kind, ability_id) if ability_id else None
 
@@ -77,4 +79,5 @@ def grammar(data: AbilityData) -> list[str]:
         phrases.update({alias, f"enemy {alias}", f"cancel {alias}", f"swap {alias}"})
         if data.get(data.alias_map[alias]).kind == "ult":
             phrases.update(f"{alias} {p}" for p in PERCENTS)
+            phrases.add(f"{alias} fed")
     return sorted(phrases) + ["[unk]"]

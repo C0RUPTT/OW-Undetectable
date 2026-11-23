@@ -387,3 +387,33 @@ def test_learning_takes_off_hold_time_and_normalises_by_factor():
 
 def test_default_rates_follow_league_data():
     assert estimate.DEFAULT_LIKELY_RATE == 15 and estimate.DEFAULT_POSSIBLE_RATE == 22
+
+
+# --- "<ult> fed" ------------------------------------------------------------------------
+
+def test_fed_brings_the_estimate_forward(data):
+    from ow_assist import commands
+    assert commands.parse("gravity fed", data) == Command("fed", "zarya_ult")
+    assert commands.parse("sleep fed", data) is None
+    assert "gravity fed" in commands.grammar(data)
+    t = tracker(data)                              # 20 / 10 pts/s, neutral heroes
+    t.apply(GRAV, 0)
+    before = t.ult_status("zarya_ult", 0).possible_in
+    assert t.apply(Command("fed", "zarya_ult"), 10)[0].kind == "fed"
+    u = t.ult_status("zarya_ult", 10)
+    assert u.possible_in == pytest.approx((2500 * 0.75) / 20 - 10)
+    assert u.possible_in < before - 10
+    t.apply(Command("undo"), 11)
+    assert t.ult_status("zarya_ult", 11).possible_in == pytest.approx(2500 / 20 - 11)
+
+
+def test_fed_on_untracked_ult_does_nothing(data):
+    assert tracker(data).apply(Command("fed", "zarya_ult"), 0)[0].kind == "nothing"
+
+
+def test_fed_caps_at_full(data):
+    t = tracker(data, fed_boost=0.6)
+    t.apply(GRAV, 0)
+    t.apply(Command("fed", "zarya_ult"), 1)
+    t.apply(Command("fed", "zarya_ult"), 2)
+    assert t.ult_status("zarya_ult", 20).state == "likely"

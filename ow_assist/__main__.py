@@ -14,7 +14,7 @@ from .speech import Speaker
 from .tracker import Tracker
 
 
-UNDOABLE = ("used", "cancelled", "reset", "round", "swapped", "seen", "fight")
+UNDOABLE = ("used", "cancelled", "reset", "round", "swapped", "seen", "fed", "fight")
 
 
 def load_rates(path) -> list[float]:
@@ -50,6 +50,7 @@ class Controller:
             learn_rates=settings["ult_learn_rates"],
             swap_kept=settings["ult_swap_kept_fraction"],
             repeat_ignore=settings["ult_repeat_ignore_seconds"],
+            fed_boost=settings["ult_fed_boost"],
             callout_tiers=tuple(settings["ult_callout_tiers"]),
             samples=load_rates(rates_path) if rates_path else None,
         )

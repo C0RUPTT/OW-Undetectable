@@ -16,7 +16,7 @@ GROUP_CALLOUT_SECONDS = 10.0  # ults due this close together are announced in on
 
 @dataclass(frozen=True)
 class Event:
-    # "used", "ready", "cancelled", "undone", "reset", "round", "swapped", "seen", "fight",
+    # "used", "ready", "cancelled", "undone", "reset", "round", "swapped", "seen", "fed", "fight",
     # "status", "ult_possible", "nothing"
     kind: str
     ability_id: str | None = None
@@ -68,7 +68,7 @@ class Tracker:
                  possible_rate: float = estimate.DEFAULT_POSSIBLE_RATE,
                  likely_rate: float = estimate.DEFAULT_LIKELY_RATE,
                  learn_rates: bool = True, swap_kept: float = 0.15,
-                 repeat_ignore: float = 8.0,
+                 repeat_ignore: float = 8.0, fed_boost: float = 0.25,
                  callout_tiers: tuple[str, ...] = ("engage", "kill"),
                  samples: list[float] | None = None):
         self.data = data
@@ -78,6 +78,7 @@ class Tracker:
         self.learn_rates = learn_rates
         self.swap_kept = swap_kept
         self.repeat_ignore = repeat_ignore
+        self.fed_boost = fed_boost
         self.callout_tiers = tuple(callout_tiers)
         self.s = _State(samples=list(samples or [])[-estimate.MAX_SAMPLES:])
         self._history: list[_State] = []
@@ -162,6 +163,16 @@ class Tracker:
             s.ults[ability.id] = _Anchor(now - self.call_lag, "swap",
                                          start_points=self.swap_kept * ability.cost)
             return [Event("swapped", ability.id)]
+
+        if cmd.kind == "fed":
+            # They're popping off: damage and healing feed their ult faster than usual.
+            anchor = s.ults.get(ability.id)
+            if ability.kind != "ult" or not ability.cost or anchor is None:
+                return [Event("nothing", ability.id)]
+            self._snapshot()
+            anchor.start_points = min(ability.cost,
+                                      anchor.start_points + self.fed_boost * ability.cost)
+            return [Event("fed", ability.id)]
 
         if cmd.kind == "seen":
             # The kill cam showed their real charge: the best data point there is.

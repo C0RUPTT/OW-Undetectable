@@ -97,6 +97,7 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 | any enemy ult: `gravity`, `nano`, `blade`, `trans`, `beat`, `pulse`, `noon`... (every hero, see `data/abilities.json`) | marks the ult as used and starts its estimate |
 | `enemy <alias>` | same as the alias alone |
 | `swap <ult>` | they just switched to that hero: starts its ult at 15% |
+| `<ult> fed` | that enemy is popping off: their ult comes 25% sooner (`ult_fed_boost`) |
 | `<ult> ten` … `<ult> ninety`, `<ult> full` | the kill cam showed their real charge (e.g. `gravity eighty`). Sets the estimate and teaches the charge rate |
 | `won fight` / `lost fight` | ends the fight and reads the summary: what they used, then what they may still have |
 | `status` | reads out what they may have right now |

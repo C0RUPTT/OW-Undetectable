@@ -10,10 +10,16 @@ What was read in full or tested directly:
 - **Dignitas's ult tracking guide**, read in full; it shaped the fight summary and
   the kill-cam calls.
 
+Also read in full:
+- the **Overwatch League Stats Lab** files (2018–2020);
+- five classic **Blizzard forum threads** on ult tracking and shotcalling, fetched
+  slowly to stay under the rate limit.
+
 What couldn't be read, and why:
 - **YouTube** sends this cloud server to Google's bot check, so no transcripts.
 - **Reddit** requires a login for scripts.
-- **The Blizzard forums** rate-limited after two threads.
+- **The Blizzard forums** rate-limit hard, so only a handful of threads.
+- **The Internet Archive** refuses connections from this server.
 
 Other coaching points in sections 1, 3 and 4 come from search summaries. Anything
 marked **unverified** came from a single weak source. To add videos, paste their
@@ -119,11 +125,25 @@ Roadhog, Moira) and heroes released after 2020 use their role's average.
   teaches the tool this lobby's charge rate.
 - **Mirror rule (Dignitas).** If you have your ult, your counterpart probably has
   theirs. If they're landing multi-hits and you aren't, they're ahead.
-- **Tells (Dignitas, forums).**
-  - Zarya pushes hard when she has Grav.
-  - Genji plays unusually safe when he has Blade.
-  - Expect panic ults from players about to die.
+- **Tells (Dignitas, Blizzard forums, Mobalytics):**
+  - **Reinhardt** stops throwing Fire Strikes and walks forward.
+  - **Zarya** pushes hard and tries to break D.Va's mech.
+  - **Genji** plays safe or flanks, then dashes into a stacked group.
+  - **Reaper** disappears to flank or walks down the middle toward the team.
+  - **Pharah** looks for an open view of several people.
+  - **Cassidy** goes to high ground.
+  - **Orisa** barges into the team.
+  - **Junkrat** hides behind a wall.
+  - In general, a player with ult avoids damage, so it doesn't get cancelled, and
+    stops trying to build charge. Expect panic ults from players about to die.
   - Teams tend to get ults around the same time.
+- **Sombra's passive** marks enemies with a full ult with a check mark (reworked June
+  2026). With a Sombra on your team, that's ground truth: call `<ult> full`.
+- **"Fed" players charge faster.** If someone is getting kills or soaking huge damage,
+  their ult comes sooner. Call `<ult> fed` to move that ult's estimate 25% closer.
+- **Real-world timing (forums):** "most ults build in about 1:30, or 2 team fights";
+  "grav might be 1:30 on average"; "at high ranks, 30–40 seconds after a won fight".
+  The tool's default puts Grav at about 1:35 "may be up".
 - **Behaviour.** A player who suddenly takes aggressive angles usually has their ult.
   A player who goes passive is often close to it or holding it.
 
@@ -220,7 +240,10 @@ Coaching and economy:
   - https://www.youtube.com/watch?v=gKYMjs3R-bM
   - https://www.youtube.com/watch?v=TnlKqOPnARQ
 
-Read in full this time:
+Read in full:
+- Blizzard forums: "Ult tracking - how do you do it?" (2019), "How to track enemy ults?" (2019), "How do you shotcall effectively?" (2021), "Who's ult is easiest to read?" (2024), "They might have Valk" (2024)
+- Mobalytics hero guides (Sombra, Reinhardt, Sigma): https://mobalytics.gg/overwatch/heroes/sombra-guide
+- Esports.gg on tank swaps and ult economy: https://esports.gg/opinion/overwatch/overwatch-2-tanks-switching-heroes-stop-it/
 - Dignitas, "Be ready! A guide to ultimate tracking in Overwatch"
 - Blizzard forums, "How do you predict Zarya Grav?" (May 2026): https://us.forums.blizzard.com/en/overwatch/t/how-do-you-predict-zarya-grav/1020732
 - Blizzard forums, "Ult Charge Decay" (Feb 2026): https://us.forums.blizzard.com/en/overwatch/t/ult-charge-decay/1000134. It confirms an ult is spent in full when cast, with no partial refund on death. Moira's Coalescence has been the exception since June 2026.

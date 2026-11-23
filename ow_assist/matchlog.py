@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from statistics import median
 
-UNDOABLE = {"used", "cancelled", "reset", "round", "swapped", "seen", "fight", "result"}
+UNDOABLE = {"used", "cancelled", "reset", "round", "swapped", "seen", "fed", "fight", "result"}
 
 
 class MatchLog:

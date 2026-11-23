@@ -16,7 +16,7 @@ DEFAULT_MATCH_LOG = ROOT / "userdata" / "match_log.jsonl"
 RESERVED_WORDS = {"undo", "reset", "new", "round", "match", "cancel", "enemy", "their",
                   "gg", "goal", "record", "swap", "fight", "won", "lost", "status",
                   "full", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy",
-                  "eighty", "ninety"}
+                  "eighty", "ninety", "fed"}
 TIERS = ("engage", "kill", "save", "minor")
 
 DEFAULT_SETTING_VALUES = {
@@ -40,6 +40,7 @@ DEFAULT_SETTING_VALUES = {
     "ult_repeat_ignore_seconds": 8.0,
     "ult_callout_tiers": ["engage", "kill"],
     "match_log": True,
+    "ult_fed_boost": 0.25,
 }
 
 

@@ -21,5 +21,6 @@
     "engage",
     "kill"
   ],
-  "match_log": true
+  "match_log": true,
+  "ult_fed_boost": 0.25
 }
