@@ -48,7 +48,16 @@ def test_reserved_word_alias_rejected(tmp_path):
     ("cancel sleep", Command("cancel", "ana_sleep")),
     ("cancel enemy grav", Command("cancel", "zarya_ult")),
     ("undo", Command("undo")),
-    ("new round", Command("reset")),
+    ("new round", Command("round")),
+    ("new match", Command("reset")),
+    ("reset", Command("reset")),
+    ("swap grav", Command("swap", "zarya_ult")),
+    ("swap enemy nano", Command("swap", "ana_ult")),
+    ("won fight", Command("fight", value="won")),
+    ("fight lost", Command("fight", value="lost")),
+    ("status", Command("status")),
+    ("gravity", Command("use", "zarya_ult")),
+    ("e m p", Command("use", "sombra_ult")),
     ("amp matrix", Command("use", "bap_ult")),
     ("[unk]", None),
     ("", None),
@@ -99,11 +108,11 @@ def test_recall_restarts_timer(data):
 
 
 def test_ult_tracks_elapsed(data):
-    t = Tracker(data, call_lag=0)
+    t = Tracker(data, call_lag=0, callout_tiers=())
     t.apply(Command("use", "zarya_ult"), 10)
-    (ability, elapsed), = t.status(58).ults
-    assert ability.id == "zarya_ult" and elapsed == 48
-    assert t.poll(1000) == []  # ults never fire ready cues
+    u, = t.status(58).ults
+    assert u.ability.id == "zarya_ult" and u.elapsed == 48 and u.anchor == "used"
+    assert t.poll(1000) == []  # no ready cues when ult callouts are off
 
 
 def test_cancel_undo_reset(data):
@@ -205,7 +214,7 @@ def test_phone_server_serves_page_and_status(data):
     try:
         base = f"http://127.0.0.1:{server.port}"
         page = urllib.request.urlopen(base + "/").read().decode()
-        assert "Enemy ults used" in page
+        assert "Enemy ults" in page
         status = json.loads(urllib.request.urlopen(base + "/status").read())
         assert status["ults"][0]["id"] == "zarya_ult"
         with pytest.raises(urllib.error.HTTPError):

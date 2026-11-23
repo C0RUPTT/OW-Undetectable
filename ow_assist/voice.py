@@ -10,6 +10,21 @@ from typing import Callable
 SAMPLE_RATE = 16000
 
 
+def missing_words(model, phrases: list[str]) -> set[str]:
+    """Words in the grammar the speech model doesn't know. Vosk silently drops them,
+    so an alias made only of missing words can never be heard."""
+    words = {w for p in phrases if p != "[unk]" for w in p.split()}
+    return {w for w in words if model.vosk_model_find_word(w) < 0}
+
+
+def unhearable(data, missing: set[str]) -> tuple[list[str], list[str]]:
+    """(aliases that can't be heard, ability labels with no hearable alias at all)."""
+    dead = [a for a in data.alias_map if missing.intersection(a.split())]
+    deaf = [ab.label for ab in data.abilities.values()
+            if all(missing.intersection(a.split()) for a in ab.aliases)]
+    return sorted(dead), deaf
+
+
 class VoiceListener:
     def __init__(self, model_path: str, phrases: list[str],
                  on_text: Callable[[str, bool], None], device=None, ptt=None):
@@ -18,6 +33,7 @@ class VoiceListener:
 
         SetLogLevel(-1)
         self._model = Model(model_path)
+        self.missing = missing_words(self._model, phrases)
         self._rec = KaldiRecognizer(self._model, SAMPLE_RATE, json.dumps(phrases))
         self._on_text = on_text
         self._device = device

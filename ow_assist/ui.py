@@ -4,6 +4,8 @@ from __future__ import annotations
 import tkinter as tk
 
 BG, FG, DIM, HOT, ULT = "#14161a", "#e8e8e8", "#7a7f87", "#ffb347", "#7fb3ff"
+STATE_COLOR = {"used": HOT, "charging": DIM, "possible": "#ffd166", "likely": "#ff6b6b",
+               "unknown": ULT}
 
 
 class StatusWindow:
@@ -46,10 +48,16 @@ class StatusWindow:
                 color = HOT if remaining <= 3 else FG
                 self._row(ability.label, f"{remaining:4.1f}s", color)
         if status.ults:
-            tk.Label(self.body, text="ULTS USED", bg=BG, fg=DIM,
+            tk.Label(self.body, text="ENEMY ULTS", bg=BG, fg=DIM,
                      font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 0))
-            for ability, elapsed in status.ults:
-                self._row(ability.label, f"{int(elapsed)}s ago", ULT)
+            for u in status.ults:
+                if u.state == "charging":
+                    value = f"~{int(u.possible_in)}s"
+                elif u.state in ("possible", "likely"):
+                    value = f"{u.state}"
+                else:
+                    value = f"{int(u.elapsed)}s ago"
+                self._row(u.ability.label, value, STATE_COLOR[u.state])
         if last_heard:
             self.last.config(text=f"heard: {last_heard}")
         self.root.after(100, self._tick)

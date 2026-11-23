@@ -9,10 +9,12 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ABILITIES = ROOT / "data" / "abilities.json"
 DEFAULT_SETTINGS = ROOT / "data" / "settings.json"
 DEFAULT_HISTORY = ROOT / "userdata" / "history.sqlite3"
+DEFAULT_RATES = ROOT / "userdata" / "ult_rates.json"
 
 # Words the command parser owns; aliases may not use them.
-RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their",
-                  "gg", "goal", "record"}
+RESERVED_WORDS = {"undo", "reset", "new", "round", "match", "cancel", "enemy", "their",
+                  "gg", "goal", "record", "swap", "fight", "won", "lost", "status"}
+TIERS = ("engage", "kill", "save", "minor")
 
 DEFAULT_SETTING_VALUES = {
     "call_lag_seconds": 0.5,
@@ -28,6 +30,12 @@ DEFAULT_SETTING_VALUES = {
     "long_session_minutes": 120,
     "session_end_grace_seconds": 120,
     "session_gap_minutes": 60,
+    "ult_possible_rate": 16.0,
+    "ult_likely_rate": 11.0,
+    "ult_learn_rates": True,
+    "ult_swap_kept_fraction": 0.15,
+    "ult_repeat_ignore_seconds": 8.0,
+    "ult_callout_tiers": ["engage", "kill"],
 }
 
 
@@ -46,6 +54,8 @@ class Ability:
     starts: str = "on_use"
     effect: float = 0.0
     custom_callout: str | None = None
+    cost: float = 0.0      # ult points; 0 = unknown, then only "time since used" is shown
+    tier: str = "minor"    # ult priority: engage, kill, save or minor
 
     @property
     def recharge_seconds(self) -> float:
@@ -102,10 +112,16 @@ def _parse_ability(raw: dict) -> Ability:
     cooldown = float(raw.get("cooldown", 0))
     if kind == "cooldown" and cooldown <= 0:
         raise DataError(f"{aid}: cooldown abilities need a positive 'cooldown'")
+    cost = float(raw.get("cost") or 0)
+    if cost < 0:
+        raise DataError(f"{aid}: cost can't be negative")
+    tier = raw.get("tier", "minor")
+    if tier not in TIERS:
+        raise DataError(f"{aid}: tier must be one of {', '.join(TIERS)}")
     return Ability(
         id=aid, kind=kind, hero=hero, name=name, aliases=aliases,
         cooldown=cooldown, starts=starts, effect=float(raw.get("effect", 0)),
-        custom_callout=raw.get("callout"),
+        custom_callout=raw.get("callout"), cost=cost, tier=tier,
     )
 
 
@@ -126,4 +142,7 @@ def load_settings(path: Path | str = DEFAULT_SETTINGS) -> dict:
         if unknown:
             raise DataError(f"unknown settings: {sorted(unknown)}")
         settings.update(user)
+    bad = set(settings["ult_callout_tiers"]) - set(TIERS)
+    if bad:
+        raise DataError(f"ult_callout_tiers: unknown tier(s) {sorted(bad)}")
     return settings

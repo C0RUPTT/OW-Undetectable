@@ -7,11 +7,14 @@ import threading
 from .data import AbilityData
 from .tracker import Event
 
-CORRECTIONS = {"undone": "undone", "cancelled": "cleared", "reset": "cleared"}
+CORRECTIONS = {"undone": "undone", "cancelled": "cleared", "reset": "cleared",
+               "round": "new round"}
 
 
 def phrase_for(event: Event, data: AbilityData) -> str | None:
     """What to say for an event, or None to stay silent."""
+    if event.say:
+        return event.say
     if event.kind == "ready":
         return data.get(event.ability_id).callout
     return CORRECTIONS.get(event.kind)

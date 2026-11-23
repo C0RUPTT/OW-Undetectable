@@ -25,12 +25,26 @@ PAGE = """<!doctype html>
   h1 { font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); font-weight:600; }
   #conn { font-size:13px; color:var(--dim); }
   #conn.lost { color:#ff6b6b; }
-  .row { display:flex; justify-content:space-between; align-items:center; background:var(--row);
-         border-radius:14px; padding:18px 20px; margin-bottom:10px; }
+  .row { background:var(--row); border-radius:14px; padding:14px 18px 12px; margin-bottom:10px;
+         border-left:6px solid transparent; }
+  .top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
   .name { font-size:24px; font-weight:650; }
   .hero { font-size:14px; color:var(--dim); margin-top:2px; }
-  .ago { font-size:40px; font-weight:700; font-variant-numeric:tabular-nums; }
-  .fresh .ago, .fresh .name { color:var(--fresh); }
+  .right { text-align:right; }
+  .ago { font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .lbl { font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
+  .bar { height:6px; background:#2a2e35; border-radius:3px; margin-top:10px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--dim); border-radius:3px; }
+  .used .ago, .used .name, .used .lbl { color:var(--fresh); }
+  .possible { border-left-color:#ffd166; } .possible .lbl, .possible .ago { color:#ffd166; }
+  .possible .bar i { background:#ffd166; }
+  .likely { border-left-color:#ff6b6b; } .likely .lbl, .likely .ago { color:#ff6b6b; }
+  .likely .bar i { background:#ff6b6b; }
+  #fights { display:none; gap:6px; align-items:center; margin-bottom:12px; font-size:14px; color:var(--dim); }
+  #fights .f { min-width:26px; height:24px; padding:0 5px; border-radius:6px; font-size:12px; font-weight:700;
+               display:flex; align-items:center; justify-content:center; color:#0f1114; }
+  #fights .won { background:#4cd07d; } #fights .lost { background:#ff6b6b; }
+  #foot { color:var(--dim); font-size:12px; margin-top:14px; text-align:center; }
   #empty { color:var(--dim); font-size:18px; text-align:center; margin-top:30vh; }
   #session { display:none; align-items:center; gap:12px; background:var(--row); border-radius:14px;
              padding:12px 16px; margin-bottom:14px; font-size:15px; }
@@ -44,13 +58,15 @@ PAGE = """<!doctype html>
   .green { background:#4cd07d; } .yellow { background:#ffd166; } .red { background:#ff6b6b; }
 </style></head>
 <body>
-<header><h1>Enemy ults used</h1><span id="conn">connecting…</span></header>
+<header><h1>Enemy ults</h1><span id="conn">connecting…</span></header>
 <section id="session"></section>
+<section id="fights"></section>
 <main id="list"></main>
 <p id="empty">No ults called yet</p>
+<p id="foot"></p>
 <script>
 const FRESH_SECONDS = 15;
-let ults = [], session = null, fetchedAt = 0;
+let ults = [], session = null, fights = [], inFight = 0, rates = null, fetchedAt = 0;
 
 function fmt(s) {
   s = Math.floor(s);
@@ -69,24 +85,49 @@ function renderSession() {
     <span class="note">${notes.join(" · ")}</span>
     <span class="recent">${s.recent.map(r => `<span class="g ${r}">${r}</span>`).join("")}</span>`;
 }
+const LABEL = {used: "used", charging: "may be up in", possible: "may be up", likely: "likely up",
+               unknown: "used"};
+const ANCHOR = {used: "", swap: " · swapped", round: " · new round"};
+function stateNow(u, dt) {
+  if (u.state === "unknown") return u.elapsed + dt < FRESH_SECONDS && u.anchor === "used" ? "used" : "unknown";
+  if (u.likely_in - dt <= 0) return "likely";
+  if (u.possible_in - dt <= 0) return "possible";
+  if (u.anchor === "used" && u.elapsed + dt < FRESH_SECONDS) return "used";
+  return "charging";
+}
+function renderFights() {
+  const el = document.getElementById("fights");
+  if (!fights.length && !inFight) { el.style.display = "none"; return; }
+  el.style.display = "flex";
+  el.innerHTML = "Fights " + fights.map(f => `<span class="f ${f.result}" title="ults they used">${f.used}</span>`).join("")
+    + (inFight ? ` <span>· ${inFight} used this fight</span>` : "");
+}
 function render() {
   renderSession();
-  const now = performance.now();
+  renderFights();
+  const dt = (performance.now() - fetchedAt) / 1000;
   const list = document.getElementById("list");
   document.getElementById("empty").style.display = ults.length ? "none" : "block";
   list.innerHTML = ults.map(u => {
-    const ago = u.elapsed + (now - fetchedAt) / 1000;
-    return `<div class="row${ago < FRESH_SECONDS ? " fresh" : ""}">
-      <div><div class="name">${u.name}</div><div class="hero">${u.hero}</div></div>
-      <div class="ago">${fmt(ago)}</div></div>`;
+    const st = stateNow(u, dt);
+    const ago = u.elapsed + dt;
+    const big = st === "charging" ? fmt(Math.max(0, u.possible_in - dt)) : fmt(ago);
+    const bar = u.state === "unknown" ? "" :
+      `<div class="bar"><i style="width:${Math.round(Math.min(1, u.charge) * 100)}%"></i></div>`;
+    return `<div class="row ${st}"><div class="top">
+      <div><div class="name">${u.name}</div><div class="hero">${u.hero}${ANCHOR[u.anchor] || ""}</div></div>
+      <div class="right"><div class="ago">${big}</div><div class="lbl">${LABEL[st]}</div></div></div>${bar}</div>`;
   }).join("");
+  document.getElementById("foot").textContent = rates ?
+    `Estimates, not facts · ${rates.likely} pts/s typical` + (rates.samples ? ` (learned from ${rates.samples})` : "") : "";
 }
 async function poll() {
   const conn = document.getElementById("conn");
   try {
     const r = await fetch("/status", {cache: "no-store"});
     const data = await r.json();
-    ults = data.ults; session = data.session; fetchedAt = performance.now();
+    ults = data.ults; session = data.session; fights = data.fights || [];
+    inFight = data.in_fight || 0; rates = data.rates; fetchedAt = performance.now();
     conn.textContent = "live"; conn.className = "";
   } catch (e) {
     conn.textContent = "disconnected"; conn.className = "lost";

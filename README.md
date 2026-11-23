@@ -2,6 +2,8 @@
 
 You call out enemy abilities as you see them used ("nade", "suzu", "grav").
 The app times them and says "nade is up" in your headset when each one is back.
+For ults it estimates when each one may be back ("grav may be up"), and after
+each fight it tells you what they used and what they may still have.
 Nothing plays when you make a call. Your confirmation is the callout arriving later.
 
 **It never reads, hooks, or draws over the game.** The only input is your
@@ -22,9 +24,11 @@ microphone. Recognition runs offline and audio is never saved.
    (or whichever button is free) in `data/settings.json`.
 6. **Run it for real:** `python -m ow_assist --model models/vosk-model-small-en-us-0.15 --device N --phone`
    Open the printed address on your phone and allow the Windows network prompt.
-7. **Check the cooldowns.** In a custom game, time each tracked ability and fix
+7. **Read the startup output.** If it says the speech model doesn't know some words,
+   those calls can't be heard. Use the second alias it lists, or add one.
+8. **Check the cooldowns.** In a custom game, time each tracked ability and fix
    the numbers in `data/abilities.json`.
-8. **Play about 5 matches** calling only `sleep`, then see the test plan at the bottom.
+9. **Play about 5 matches** calling only `sleep`, then see the test plan at the bottom.
 
 If anything fails, copy the full error text and send it to me.
 
@@ -62,8 +66,11 @@ watches the button the same way Discord's push-to-talk does.
 Run with `--phone`. The app prints an address like `http://192.168.1.20:8765`.
 Open it on your phone, which must be on the same Wi-Fi as your PC.
 
-- Each enemy ult you've called shows a live "time since used" counter.
-  It's highlighted orange for the first 15 seconds, so fresh ults stand out.
+- Each enemy ult you've called gets a row: orange for 15 seconds after it was used,
+  then a countdown to "may be up in", then **yellow "may be up"**, then
+  **red "likely up"**. The bar shows the estimated charge.
+- The strip at the top shows recent fights: green won, red lost, with the number
+  of ults they used in each.
 - Rows keep a fixed order, so they don't jump around while you glance.
 - "new round" clears the list. "disconnected" means the phone lost the PC.
 - **Windows will ask to allow network access the first time.** Allow it on
@@ -79,20 +86,49 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 | Say | Effect |
 |---|---|
 | `nade`, `sleep`, `suzu`, `lamp`, `grip`, `cryo` | starts that cooldown timer |
-| `nano`, `kitsune`, `amp matrix`, `beat`, `trans`, `grav`, `shatter`, `blade` | marks the ult as used, then counts up the time since |
+| any enemy ult: `grav`, `nano`, `blade`, `trans`, `beat`, `pulse`, `noon`... (every hero, see `data/abilities.json`) | marks the ult as used and starts its estimate |
 | `enemy <alias>` | same as the alias alone |
+| `swap <ult>` | they just switched to that hero: starts its ult at 15% |
+| `won fight` / `lost fight` | ends the fight and reads the summary: what they used, then what they may still have |
+| `status` | reads out what they may have right now |
 | `cancel <alias>` | removes that timer |
 | `undo` | reverts your last call |
-| `reset` / `new round` | clears everything |
+| `new round` | ult charge back to 0 for every hero you're tracking (sides swapped, or the next Control round). Keeps the enemy comp |
+| `reset` / `new match` | clears everything, comp included |
 
 ## What you hear
 
 - **"sleep is up", "nade is up"...:** that cooldown is back. Set a different
   phrase with `"callout"` on an ability in `data/abilities.json`.
-- **"undone" / "cleared":** after `undo`, `cancel` or `new round`, so you know
-  the correction worked.
-- **Nothing else.** Calls are silent and ults have no callout, since there's no
-  "ready" moment to announce.
+- **"grav may be up":** an engage or kill ult has reached its earliest likely
+  return. Ults due within 10 seconds of each other are grouped: "grav and nano may
+  be up". Change which tiers speak with `ult_callout_tiers`, or set it to `[]`.
+- **Fight summary**, after `won fight` / `lost fight`: "They used grav and nano.
+  May have blade." Or "No enemy ults. Nothing likely up. trans in about 40 seconds."
+- **"undone" / "cleared" / "new round":** after `undo`, `cancel`, `reset` or
+  `new round`, so you know the correction worked.
+- **Nothing else.** Calls themselves are silent.
+
+## Ult tracking
+
+Built from coaching guides and patch data. **[docs/ult-tracking.md](docs/ult-tracking.md)**
+has the research and sources. In short:
+
+- **Every ult has a cost and a tier** (engage, kill, save, minor). The estimate is
+  `cost / 16` seconds to "may be up" and `cost / 11` to "likely up", since real
+  matches charge at about 2-3× the 5 points/s passive rate.
+- **It learns your games.** Each time you call the same ult again, the gap between
+  calls tunes the rates. They are saved in `userdata/ult_rates.json`, and the phone
+  footer shows how many samples it has.
+- **It's an estimate, never a fact.** It knows when you saw the ult, not their damage.
+  If an enemy is getting fed, assume earlier.
+- **How to use it, as coaches teach it:**
+  - Start by calling only 1-3 ults: your mirror, then one engage, one kill and one
+    save ult.
+  - Say `won fight` / `lost fight` at the end of every fight.
+  - Say `new round` when sides swap.
+  - Call `swap <ult>` when you see a swap.
+  - Expect about the same number of ults as last fight, plus one or two.
 
 ## Tilt tracker
 
@@ -138,6 +174,12 @@ them. Add or remove abilities and aliases.
 
 ## Settings (`data/settings.json`)
 
+- `ult_possible_rate` / `ult_likely_rate`: points per second used for "may be up" and
+  "likely up" (defaults 16 and 11). `ult_learn_rates`: tune them from your games.
+- `ult_swap_kept_fraction`: charge kept on a hero swap (0.15).
+- `ult_repeat_ignore_seconds`: the same ult called again within this many seconds
+  counts as one call (8).
+- `ult_callout_tiers`: which tiers get "may be up" callouts (`["engage", "kill"]`).
 - `call_lag_seconds`: how many seconds are subtracted from each timer,
   because you speak after the ability is used.
 - `fire_on_partial`: acts on a call before you finish speaking, which is
@@ -154,6 +196,11 @@ Then check three things:
 - Did calling feel natural?
 - Did the recognizer misfire?
 - Did the callouts help or get in the way?
+
+Then 5 matches calling 2-3 enemy ults plus `won fight` / `lost fight`:
+- Were the "may be up" calls roughly right, or early or late? Adjust
+  `ult_likely_rate`, or just keep playing and let it learn.
+- Was the fight summary short enough to hear mid-game?
 
 ## Tests
 

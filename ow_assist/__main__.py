@@ -2,26 +2,56 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import threading
 import time
 
 from . import commands
-from .data import (DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_SETTINGS, load_abilities,
-                   load_settings)
+from .data import (DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_RATES, DEFAULT_SETTINGS,
+                   DEFAULT_SETTING_VALUES, load_abilities, load_settings)
 from .speech import Speaker
 from .tracker import Tracker
 
 
+UNDOABLE = ("used", "cancelled", "reset", "round", "swapped", "fight")
+
+
+def load_rates(path) -> list[float]:
+    """Charge rates learned from earlier games (see estimate.py)."""
+    try:
+        return [float(x) for x in json.loads(open(path, encoding="utf-8").read())["samples"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+
+
+def save_rates(path, samples: list[float]) -> None:
+    from pathlib import Path
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"samples": [round(x, 2) for x in samples]}), encoding="utf-8")
+
+
 class Controller:
-    def __init__(self, data, settings, speaker: Speaker, tilt=None, log=print):
+    def __init__(self, data, settings, speaker: Speaker, tilt=None, log=print, rates_path=None):
         self.data = data
         self.tilt = tilt
         self._undo_owners: list[str] = []  # who handled each undoable action, newest last
-        self.settings = settings
+        self.settings = settings = {**DEFAULT_SETTING_VALUES, **settings}
         self.speaker = speaker
         self.log = log
-        self.tracker = Tracker(data, settings["call_lag_seconds"])
+        self.rates_path = rates_path
+        self.tracker = Tracker(
+            data, settings["call_lag_seconds"],
+            possible_rate=settings["ult_possible_rate"],
+            likely_rate=settings["ult_likely_rate"],
+            learn_rates=settings["ult_learn_rates"],
+            swap_kept=settings["ult_swap_kept_fraction"],
+            repeat_ignore=settings["ult_repeat_ignore_seconds"],
+            callout_tiers=tuple(settings["ult_callout_tiers"]),
+            samples=load_rates(rates_path) if rates_path else None,
+        )
+        self._saved_samples = list(self.tracker.samples)
         self._lock = threading.Lock()
         self._fired_partial: str | None = None
         self.last_heard = ""
@@ -61,13 +91,23 @@ class Controller:
                 if cmd.kind == "undo" and self._undo_owners:
                     self._undo_owners.pop()
                 events = self.tracker.apply(cmd, time.monotonic())
-                if events[0].kind in ("used", "cancelled", "reset"):
+                if events[0].kind in UNDOABLE:
                     self._undo_owners.append("tracker")
                 lines = []
+            self._save_rates()
         self._say(lines)
         for e in events:
             self.speaker.handle(e)
-            self.log(f"[{e.kind}] {text}")
+            self.log(f"[{e.kind}] {text}" + (f" -> {e.say}" if e.say else ""))
+
+    def _save_rates(self) -> None:
+        """Keep learned charge rates for next time. Call with the lock held."""
+        if self.rates_path and self.tracker.samples != self._saved_samples:
+            self._saved_samples = list(self.tracker.samples)
+            try:
+                save_rates(self.rates_path, self._saved_samples)
+            except OSError as e:
+                self.log(f"[warn] couldn't save ult rates: {e}")
 
     def _say(self, lines: list[str]) -> None:
         for line in lines:
@@ -95,22 +135,37 @@ class Controller:
             lines = self.tilt.check(time.time()) if self.tilt else []
         for e in events:
             self.speaker.handle(e)
-            self.log(f"[{e.kind}] {self.data.get(e.ability_id).label}")
+            self.log(f"[{e.kind}] {e.say or self.data.get(e.ability_id).label}")
         self._say(lines)
         return status, self.last_heard
 
     def ult_snapshot(self) -> dict:
         """Ult timers for the phone view, in data-file order so rows don't jump around."""
         with self._lock:
-            status = self.tracker.status(time.monotonic())
+            now = time.monotonic()
+            status = self.tracker.status(now)
+            fights = self.tracker.fights
+            in_fight = len(self.tracker.fight_uses)
+            rates = self.tracker.rates()
+            samples = len(self.tracker.samples)
             session = self.tilt.snapshot(time.time()) if self.tilt else None
         order = {aid: i for i, aid in enumerate(self.data.abilities)}
-        ults = sorted(status.ults, key=lambda x: order[x[0].id])
-        return {"ults": [{"id": a.id, "hero": a.hero, "name": a.name, "elapsed": round(e, 2)}
-                         for a, e in ults],
+        ults = sorted(status.ults, key=lambda u: order[u.ability.id])
+        return {"ults": [{"id": u.ability.id, "hero": u.ability.hero, "name": u.ability.name,
+                          "alias": u.ability.aliases[0], "tier": u.ability.tier,
+                          "elapsed": round(u.elapsed, 2), "anchor": u.anchor, "state": u.state,
+                          "possible_in": round(u.possible_in, 1),
+                          "likely_in": round(u.likely_in, 1), "charge": round(u.charge, 3)}
+                         for u in ults],
+                "fights": [{"result": r, "used": n} for r, n in fights[-8:]],
+                "in_fight": in_fight,
+                "rates": {"possible": round(rates.possible, 1), "likely": round(rates.likely, 1),
+                          "samples": samples},
                 "session": session}
 
     def shutdown(self) -> None:
+        with self._lock:
+            self._save_rates()
         if self.tilt:
             with self._lock:
                 self.tilt.end_session(time.time())
@@ -129,6 +184,8 @@ def main(argv=None) -> int:
     p.add_argument("--abilities", default=str(DEFAULT_ABILITIES))
     p.add_argument("--settings", default=str(DEFAULT_SETTINGS))
     p.add_argument("--history", default=str(DEFAULT_HISTORY), help="where game results are stored")
+    p.add_argument("--rates", default=str(DEFAULT_RATES),
+                   help="where learned ult charge rates are stored")
     p.add_argument("--stats", action="store_true", help="print your stats and exit")
     args = p.parse_args(argv)
 
@@ -154,7 +211,7 @@ def main(argv=None) -> int:
                        settings["stop_after_losses"], settings["long_session_minutes"],
                        settings["session_gap_minutes"])
     speaker = Speaker(data, enabled=not args.mute, rate=settings["speech_rate"])
-    controller = Controller(data, settings, speaker, tilt)
+    controller = Controller(data, settings, speaker, tilt, rates_path=args.rates)
 
     from .watcher import GameWatcher
     GameWatcher(settings["game_process"], controller.game_started, controller.game_stopped,
@@ -168,7 +225,7 @@ def main(argv=None) -> int:
 
     if args.text:
         def read_stdin():
-            print("Type commands (e.g. 'nade', 'cancel nade', 'undo', 'reset'):")
+            print("Type commands (e.g. 'grav', 'won fight', 'status', 'swap grav', 'undo'):")
             for line in sys.stdin:
                 if not commands.parse(line, data):
                     print("  not a command")
@@ -184,8 +241,18 @@ def main(argv=None) -> int:
             button.start()
             ptt = (PushToTalkGate(tail_seconds=settings["ptt_tail_seconds"]), button.is_held)
             print(f"Push-to-talk on {settings['push_to_talk']}: hold it while you make a call.")
-        VoiceListener(args.model, commands.grammar(data), controller.on_text, device, ptt).start()
-        print("Listening. Say an alias, 'cancel <alias>', 'undo', or 'new round'.")
+        listener = VoiceListener(args.model, commands.grammar(data), controller.on_text, device, ptt)
+        if listener.missing:
+            from .voice import unhearable
+            dead, deaf = unhearable(data, listener.missing)
+            print(f"Warning: the speech model doesn't know {sorted(listener.missing)}.")
+            print(f"  These calls can't be heard: {dead}")
+            if deaf:
+                print(f"  No working alias at all for: {deaf}. Add a plain-English alias "
+                      "for them in data/abilities.json.")
+        listener.start()
+        print("Listening. Say an ult or ability, 'won fight' / 'lost fight', 'status', "
+              "'swap <ult>', 'undo', or 'new round'.")
 
     if not args.window:
         try:
