@@ -22,15 +22,21 @@ microphone. Recognition runs offline and audio is never saved.
    headset mic's number.
 5. **Set push-to-talk** (optional but recommended): set `"push_to_talk": "mouse:x2"`
    (or whichever button is free) in `data/settings.json`.
-6. **Run it for real:** `python -m ow_assist --model models/vosk-model-small-en-us-0.15 --device N --phone`
+6. **Mic test (10 minutes):** `python -m ow_assist --mic-test --model models/vosk-model-small-en-us-0.15 --device N`
+   It shows each call word; say it into your headset as you would in a match. At the
+   end it lists the words it misheard. **WRONG** (heard as a different call) means
+   change that word; **MISSED** means try it again. Send me the report: it's saved
+   to `userdata/mic_test.txt`.
+7. **Run it for real:** `python -m ow_assist --model models/vosk-model-small-en-us-0.15 --device N --phone`
    Open the printed address on your phone and allow the Windows network prompt.
-7. **Read the startup output.** If it says the speech model doesn't know some words,
+8. **Read the startup output.** If it says the speech model doesn't know some words,
    those calls can't be heard. Pick another word for them. Optional: after changing
    a call word, run `python tools/check_speech.py models/vosk-model-small-en-us-0.15`
    (needs espeak-ng and numpy) to see how reliably each call is heard.
-8. **Check the cooldowns.** In a custom game, time each tracked ability and fix
+9. **Check the cooldowns.** In a custom game, time each tracked ability and fix
    the numbers in `data/abilities.json`.
-9. **Play about 5 matches** calling only `sleep`, then see the test plan at the bottom.
+10. **Play about 5 matches**, then run `python -m ow_assist --review 5` and send me
+    the output. See the test plan at the bottom.
 
 If anything fails, copy the full error text and send it to me.
 
@@ -137,6 +143,37 @@ has the research and sources. In short:
     It's the only real number you'll get.
   - Expect about the same number of ults as last fight, plus one or two.
 
+## Mic test
+
+`python -m ow_assist --mic-test --model <model> --device N` asks for every call word, one
+at a time. It uses the same recognizer, grammar and push-to-talk as a match.
+
+- `--mic-test gravity nano blade` tests only those words, e.g. after you change one.
+- `--rounds 2` asks for each word twice, to catch words that only sometimes fail.
+- Ctrl+C stops early and still prints the report.
+- `--text --mic-test` lets you type instead, to try it out without a mic.
+
+Only the recognized text is kept, never audio.
+
+## Match review
+
+Every call is logged with what the tool was estimating at that moment, in
+`userdata/match_log.jsonl` (turn it off with `"match_log": false`). After playing:
+
+`python -m ow_assist --review` (last match), `--review 5`, or `--review all`
+
+It shows:
+- **Each ult that was used again**, how long after the last time, against the tool's
+  "may be up" and "likely" times. It's marked **EARLY** (came back before "may be
+  up"), *in the window*, or later. Later usually means they held it, or a call was
+  missed.
+- **Each kill-cam call:** the real % next to what the tool estimated.
+- **Enemy ults per fight.**
+- **A verdict:** whether the estimates run fast or slow, and what to change.
+
+Undone calls are left out. A match starts when the app starts, on `reset` /
+`new match`, and on `gg ...`, so say `gg win` / `gg loss` after each game.
+
 ## Tilt tracker
 
 It runs automatically alongside the cooldown tracker.
@@ -194,6 +231,7 @@ them. Add or remove abilities and aliases.
 - `speech_rate`: how fast callouts are spoken.
 - `window_topmost`: keeps the optional window above other windows.
 - `phone_port`: the port the phone view uses.
+- `match_log`: log every call for `--review` (on by default).
 - `push_to_talk`: see above. `ptt_tail_seconds` is how long it keeps listening after you release.
 
 ## Prototype test plan
@@ -204,10 +242,11 @@ Then check three things:
 - Did the recognizer misfire?
 - Did the callouts help or get in the way?
 
-Then 5 matches calling 2-3 enemy ults plus `won fight` / `lost fight`:
-- Did every call word register? Check the startup output first.
-- Were the "may be up" calls roughly right, or early or late? Adjust
-  `ult_likely_rate`, or just keep playing and let it learn.
+Then do the mic test, and 5 matches calling 2-3 enemy ults plus `won fight` /
+`lost fight`, the kill-cam % when you die, and `gg win` / `gg loss` at the end:
+- Run `python -m ow_assist --review 5`. Were most repeat ults "in the window"?
+  Lots of EARLY means the estimates are too slow.
+- Did anything get misheard mid-match that the mic test didn't catch?
 - Was the fight summary short enough to hear mid-game?
 
 ## Tests

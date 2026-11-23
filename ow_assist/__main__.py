@@ -8,8 +8,8 @@ import threading
 import time
 
 from . import commands
-from .data import (DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_RATES, DEFAULT_SETTINGS,
-                   DEFAULT_SETTING_VALUES, load_abilities, load_settings)
+from .data import (DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_MATCH_LOG, DEFAULT_RATES,
+                   DEFAULT_SETTINGS, DEFAULT_SETTING_VALUES, load_abilities, load_settings)
 from .speech import Speaker
 from .tracker import Tracker
 
@@ -33,8 +33,10 @@ def save_rates(path, samples: list[float]) -> None:
 
 
 class Controller:
-    def __init__(self, data, settings, speaker: Speaker, tilt=None, log=print, rates_path=None):
+    def __init__(self, data, settings, speaker: Speaker, tilt=None, log=print, rates_path=None,
+                 match_log=None):
         self.data = data
+        self.match_log = match_log  # MatchLog or None
         self.tilt = tilt
         self._undo_owners: list[str] = []  # who handled each undoable action, newest last
         self.settings = settings = {**DEFAULT_SETTING_VALUES, **settings}
@@ -80,6 +82,7 @@ class Controller:
                 lines = self.tilt.handle(cmd, time.time())
                 if cmd.kind == "result":
                     self._undo_owners.append("tilt")
+                    self._log("result", heard=text, value=cmd.value)
             self._say(lines)
             return
         with self._lock:
@@ -87,18 +90,39 @@ class Controller:
                 self._undo_owners.pop()
                 lines = self.tilt.undo()
                 events = []
+                self._log("undone", heard=text)
             else:
                 if cmd.kind == "undo" and self._undo_owners:
                     self._undo_owners.pop()
-                events = self.tracker.apply(cmd, time.monotonic())
+                now = time.monotonic()
+                before = self.tracker.peek(cmd.ability_id, now)
+                in_fight = len(self.tracker.fight_uses)
+                events = self.tracker.apply(cmd, now)
                 if events[0].kind in UNDOABLE:
                     self._undo_owners.append("tracker")
                 lines = []
+                for e in events:
+                    if e.kind == "nothing":
+                        continue
+                    extra = {"ults": in_fight} if e.kind == "fight" else {}
+                    self._log(e.kind, heard=text, ult=e.ability_id, value=cmd.value,
+                              before=before if e.kind in ("used", "seen", "swapped") else None,
+                              say=e.say,
+                              rates=self.tracker.rates() if e.kind in ("used", "seen") else None,
+                              **extra)
             self._save_rates()
         self._say(lines)
         for e in events:
             self.speaker.handle(e)
             self.log(f"[{e.kind}] {text}" + (f" -> {e.say}" if e.say else ""))
+
+    def _log(self, kind: str, **fields) -> None:
+        if self.match_log is None:
+            return
+        try:
+            self.match_log.record(kind, **fields)
+        except OSError as e:
+            self.log(f"[warn] couldn't write match log: {e}")
 
     def _save_rates(self) -> None:
         """Keep learned charge rates for next time. Call with the lock held."""
@@ -131,6 +155,9 @@ class Controller:
         with self._lock:
             now = time.monotonic()
             events = self.tracker.poll(now)
+            for e in events:
+                if e.kind == "ult_possible":
+                    self._log("ult_possible", ult=e.ability_id, say=e.say)
             status = self.tracker.status(now)
             lines = self.tilt.check(time.time()) if self.tilt else []
         for e in events:
@@ -172,6 +199,71 @@ class Controller:
         self.speaker.close()
 
 
+def mic_test(args) -> int:
+    import queue
+    from pathlib import Path
+
+    from .mictest import MicTest, default_phrases, run
+
+    data = load_abilities(args.abilities)
+    settings = load_settings(args.settings)
+    phrases = [" ".join(w.lower().split()) for w in args.mic_test] or default_phrases(data)
+    try:
+        test = MicTest(data, phrases, rounds=max(1, args.rounds))
+    except ValueError as e:
+        print(e)
+        return 2
+
+    if args.text:
+        def listen(_timeout):
+            try:
+                return input("        type it: ")
+            except EOFError:
+                raise KeyboardInterrupt from None
+    else:
+        from .voice import VoiceListener, unhearable
+        heard: queue.Queue[str] = queue.Queue()
+
+        def on_text(text, final):
+            if final and text.strip() and text.strip() != "[unk]":
+                heard.put(text)
+
+        device = int(args.device) if args.device and args.device.isdigit() else args.device
+        ptt = None
+        if settings["push_to_talk"]:
+            from .ptt import ButtonState, PushToTalkGate
+            button = ButtonState(settings["push_to_talk"])
+            button.start()
+            ptt = (PushToTalkGate(tail_seconds=settings["ptt_tail_seconds"]), button.is_held)
+            print(f"Push-to-talk is on ({settings['push_to_talk']}): hold it for each call, "
+                  "like in a match.")
+        listener = VoiceListener(args.model, commands.grammar(data), on_text, device, ptt)
+        if listener.missing:
+            dead, _ = unhearable(data, listener.missing)
+            print(f"These calls can never be heard (not in the model): {dead}")
+        listener.start()
+        time.sleep(1.0)  # let the mic open
+
+        def listen(timeout):
+            while not heard.empty():  # drop anything said before the prompt
+                heard.get_nowait()
+            try:
+                return heard.get(timeout=timeout)
+            except queue.Empty:
+                return ""
+
+    text = run(test, listen, pause=0 if args.text else 0.6)
+    print("\n" + text)
+    out = Path(args.history).parent / "mic_test.txt"
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(time.strftime("%Y-%m-%d %H:%M\n") + text + "\n", encoding="utf-8")
+        print(f"\nSaved to {out}")
+    except OSError:
+        pass
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="ow_assist", description="Voice-driven cooldown tracker")
     p.add_argument("--model", help="path to an unzipped Vosk model folder")
@@ -187,11 +279,27 @@ def main(argv=None) -> int:
     p.add_argument("--rates", default=str(DEFAULT_RATES),
                    help="where learned ult charge rates are stored")
     p.add_argument("--stats", action="store_true", help="print your stats and exit")
+    p.add_argument("--match-log", default=str(DEFAULT_MATCH_LOG),
+                   help="where every call is logged for --review")
+    p.add_argument("--mic-test", nargs="*", metavar="CALL",
+                   help="say each call and see which ones are misheard (all calls, or just "
+                        "the ones listed), then exit")
+    p.add_argument("--rounds", type=int, default=1, help="how many times --mic-test asks for each call")
+    p.add_argument("--review", nargs="?", const="1", metavar="N",
+                   help="compare the estimates with what happened in the last N matches "
+                        "(default 1, or 'all'), then exit")
     args = p.parse_args(argv)
 
     if args.list_devices:
         import sounddevice as sd
         print(sd.query_devices())
+        return 0
+    if args.review:
+        from .matchlog import report
+        data = load_abilities(args.abilities)
+        names = {a.id: a.label for a in data.abilities.values()}
+        last = None if args.review == "all" else int(args.review)
+        print(report(args.match_log, names, last))
         return 0
     if args.stats:
         from .stats import report
@@ -200,6 +308,8 @@ def main(argv=None) -> int:
         return 0
     if not args.text and not args.model:
         p.error("--model is required unless --text is used")
+    if args.mic_test is not None:
+        return mic_test(args)
 
     data = load_abilities(args.abilities)
     settings = load_settings(args.settings)
@@ -211,7 +321,12 @@ def main(argv=None) -> int:
                        settings["stop_after_losses"], settings["long_session_minutes"],
                        settings["session_gap_minutes"])
     speaker = Speaker(data, enabled=not args.mute, rate=settings["speech_rate"])
-    controller = Controller(data, settings, speaker, tilt, rates_path=args.rates)
+    match_log = None
+    if settings["match_log"]:
+        from .matchlog import MatchLog
+        match_log = MatchLog(args.match_log)
+    controller = Controller(data, settings, speaker, tilt, rates_path=args.rates,
+                            match_log=match_log)
 
     from .watcher import GameWatcher
     GameWatcher(settings["game_process"], controller.game_started, controller.game_stopped,

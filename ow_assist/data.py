@@ -10,6 +10,7 @@ DEFAULT_ABILITIES = ROOT / "data" / "abilities.json"
 DEFAULT_SETTINGS = ROOT / "data" / "settings.json"
 DEFAULT_HISTORY = ROOT / "userdata" / "history.sqlite3"
 DEFAULT_RATES = ROOT / "userdata" / "ult_rates.json"
+DEFAULT_MATCH_LOG = ROOT / "userdata" / "match_log.jsonl"
 
 # Words the command parser owns; aliases may not use them.
 RESERVED_WORDS = {"undo", "reset", "new", "round", "match", "cancel", "enemy", "their",
@@ -38,6 +39,7 @@ DEFAULT_SETTING_VALUES = {
     "ult_swap_kept_fraction": 0.15,
     "ult_repeat_ignore_seconds": 8.0,
     "ult_callout_tiers": ["engage", "kill"],
+    "match_log": True,
 }
 
 

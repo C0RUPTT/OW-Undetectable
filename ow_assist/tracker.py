@@ -32,6 +32,8 @@ class UltStatus:
     possible_in: float   # seconds until possible (0 once it is)
     likely_in: float     # seconds until likely (0 once it is)
     charge: float        # 0..1 estimate at the typical rate
+    possible_after: float = 0.0  # seconds after the anchor it becomes possible (0 = unknown)
+    likely_after: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -248,7 +250,12 @@ class Tracker:
             ability, elapsed, anchor.kind,
             estimate.state(elapsed, anchor.kind, possible_after, likely_after),
             max(0.0, possible_after - elapsed), max(0.0, likely_after - elapsed), charge,
+            possible_after, likely_after,
         )
+
+    def peek(self, aid: str | None, now: float) -> UltStatus | None:
+        """The estimate for one ult right now, or None if it isn't tracked."""
+        return self.ult_status(aid, now) if aid in self.s.ults else None
 
     def status(self, now: float) -> Status:
         cds = sorted(

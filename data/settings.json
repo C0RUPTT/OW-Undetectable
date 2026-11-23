@@ -20,5 +20,6 @@
   "ult_callout_tiers": [
     "engage",
     "kill"
-  ]
+  ],
+  "match_log": true
 }
