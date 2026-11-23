@@ -1,8 +1,8 @@
 # OW Assist: voice cooldown tracker (prototype)
 
-You call out enemy abilities as you see them used ("nade", "suzu", "grav").
+You call out enemy abilities as you see them used ("nade", "bell", "gravity").
 The app times them and says "nade is up" in your headset when each one is back.
-For ults it estimates when each one may be back ("grav may be up"), and after
+For ults it estimates when each one may be back ("gravity may be up"), and after
 each fight it tells you what they used and what they may still have.
 Nothing plays when you make a call. Your confirmation is the callout arriving later.
 
@@ -85,8 +85,8 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 
 | Say | Effect |
 |---|---|
-| `nade`, `sleep`, `suzu`, `lamp`, `grip`, `cryo` | starts that cooldown timer |
-| any enemy ult: `grav`, `nano`, `blade`, `trans`, `beat`, `pulse`, `noon`... (every hero, see `data/abilities.json`) | marks the ult as used and starts its estimate |
+| `nade`, `sleep`, `bell` (Suzu), `lamp`, `grip`, `cryo` | starts that cooldown timer |
+| any enemy ult: `gravity`, `nano`, `blade`, `trans`, `beat`, `pulse`, `noon`... (every hero, see `data/abilities.json`) | marks the ult as used and starts its estimate |
 | `enemy <alias>` | same as the alias alone |
 | `swap <ult>` | they just switched to that hero: starts its ult at 15% |
 | `won fight` / `lost fight` | ends the fight and reads the summary: what they used, then what they may still have |
@@ -100,10 +100,10 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 
 - **"sleep is up", "nade is up"...:** that cooldown is back. Set a different
   phrase with `"callout"` on an ability in `data/abilities.json`.
-- **"grav may be up":** an engage or kill ult has reached its earliest likely
-  return. Ults due within 10 seconds of each other are grouped: "grav and nano may
+- **"gravity may be up":** an engage or kill ult has reached its earliest likely
+  return. Ults due within 10 seconds of each other are grouped: "gravity and nano may
   be up". Change which tiers speak with `ult_callout_tiers`, or set it to `[]`.
-- **Fight summary**, after `won fight` / `lost fight`: "They used grav and nano.
+- **Fight summary**, after `won fight` / `lost fight`: "They used gravity and nano.
   May have blade." Or "No enemy ults. Nothing likely up. trans in about 40 seconds."
 - **"undone" / "cleared" / "new round":** after `undo`, `cancel`, `reset` or
   `new round`, so you know the correction worked.
@@ -165,7 +165,7 @@ It runs automatically alongside the cooldown tracker.
 ## Why these abilities
 
 The defaults are picked for Tracer, Sojourn, Genji and Cassidy: the enemy
-cooldowns that stop your dive (sleep, cryo) or save your target (suzu, lamp,
+cooldowns that stop your dive (sleep, cryo) or save your target (Suzu, lamp,
 grip, nade's anti-heal decides duels). Edit `data/abilities.json` to change
 them. Add or remove abilities and aliases.
 
@@ -198,6 +198,7 @@ Then check three things:
 - Did the callouts help or get in the way?
 
 Then 5 matches calling 2-3 enemy ults plus `won fight` / `lost fight`:
+- Did every call word register? Check the startup output first.
 - Were the "may be up" calls roughly right, or early or late? Adjust
   `ult_likely_rate`, or just keep playing and let it learn.
 - Was the fight summary short enough to hear mid-game?

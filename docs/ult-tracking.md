@@ -2,9 +2,14 @@
 
 This sums up research done in November 2026 across coaching guides, Blizzard forum
 threads, Reddit guides, patch notes, the Overwatch wiki and other trackers (LoL and
-Dota timers, Overwatch tools). Sources are at the bottom. Anything marked
-**unverified** came from a single weak source or from search snippets, because many
-of these pages could not be opened directly.
+Dota timers, Overwatch tools). Sources are at the bottom.
+
+Two things were checked directly against the source:
+- **ult costs**, against the wiki and Blizzard's 2026 patch notes;
+- **call words**, against the speech model itself.
+
+The coaching material in sections 1, 3 and 4 still comes from search summaries, not
+full reads. Anything marked **unverified** came from a single weak source.
 
 ## 1. How to practise
 
@@ -19,7 +24,7 @@ of these pages could not be opened directly.
   The tool tags every ult with one of these tiers, plus **minor**.
 - **Count ults per fight.** If they used 2 last fight, expect 2 or 3 next fight.
 - **Report what they still have, not only what they used.** Report it after the
-  fight or in spawn, in short calls: "They used grav. Care nano."
+  fight or in spawn, in short calls: "They used grav. Care nano." (the tool says "gravity", see section 5)
 - **Don't narrate charge percentages.** Call only what changes a decision.
 - **Review.** Watch replays in third person, where ult charge is visible, and check
   which ults you missed.
@@ -30,7 +35,8 @@ of these pages could not be opened directly.
 |---|---|---|
 | Passive charge | about 5 points/second for every hero, from when the doors open | wiki |
 | Damage and healing | about 1 point per HP dealt or healed to enemy heroes; little or nothing from barriers and turrets | community testing |
-| Tanks | damage or healing done to a tank gives less charge (−40% as of the Feb 2026 sub-roles patch; sources conflict) | **unverified** |
+| Tanks | damage or healing done to a tank gives 40% less charge (raised from 20% in July 2026) | patch notes |
+| Tactician supports | can no longer bank charge past 100% (June 2026) | patch notes |
 | Hero swap | keeps at most **15%** of the new hero's cost (30% → 25% → 15% since 2023) | patch notes |
 | New round | everyone starts at **0**. That covers each Control round and the side swap on Escort/Hybrid | wiki |
 | Same round | charge carries through checkpoints, deaths and overtime | standard behaviour |
@@ -83,10 +89,12 @@ at today's cost. That is a pro game, though, and an upper bound.
 ## 5. Choosing callout words (speech recognition)
 
 - Vosk only hears words in its model's vocabulary and **silently drops the rest**.
-  The tool now checks every alias at startup and warns you. Words likely missing
-  from the small English model include grav, nade, suzu, cryo, kitsune, panopticon
-  and nerf. Each of those has a plain-English second alias (gravity, grenade, bell,
-  ice block, fox, prison, self destruct).
+  Every alias was checked against `vosk-model-small-en-us-0.15` itself. It does
+  **not** know grav, suzu, kitsune, deadeye, overclock, panopticon, railgun or
+  zarya. So the calls are **gravity** (Zarya), **bell** (Suzu), **fox** (Kitsune),
+  **noon** (Deadeye), **sojourn** (Overclock) and **prison** (Panopticon). It does
+  know nade, cryo, nerf, nano, trans, valk, bob and the rest. The app checks again
+  at startup and warns about any alias you add that the model can't hear.
 - Use distinct words. These pairs sound alike or clash:
   - nano / nade
   - amp / lamp (so Baptiste's ult is only "amp matrix")
@@ -101,17 +109,25 @@ at today's cost. That is a pro game, though, and an upper bound.
 
 ## Ult costs used (points)
 
-The costs live in `data/abilities.json`. Values come from the wiki table as of about
-July 2026, adjusted for later patch notes:
+The costs live in `data/abilities.json`. They were checked on 2026-11-23, row by row,
+against the wiki's ult table (revision 379906) and Blizzard's live patch notes for
+June to November 2026. 49 of 54 matched the wiki.
 
-- Hazard +7% (Aug 2026)
-- Winston −6% (Aug 2026)
-- Domina −6% (Sep 2026)
+The wiki is up to date through the June 16 patch, but it missed these changes, so
+their costs are the wiki value times the patch %, rounded to 25:
 
-**Least sure:** Domina, Hazard, Winston, Mercy (raised in June 2026, amount
-unclear), Roadhog (reworked Oct 2026), Reaper and Torbjörn (third-party source
-only) and Doctrine. D.Mon is unknown, so it shows only time since used. Check any
-of them in a custom game or on the wiki and edit the file.
+| Hero | Wiki | Patch | Used |
+|---|---|---|---|
+| Hanzo | 1700 | −12% (June) | 1500 |
+| Genji | 2125 | −6% (Aug 11) | 2000 |
+| Venture | 1950 | −8% (Aug 11) | 1800 |
+| Emre | 2750 | −6% (Aug 11) | 2575 |
+| Hazard | 2150 | +7% (Aug 11) | 2300 |
+| Winston | 2525 | −6% (Aug 11) | 2375 |
+| Domina | 2200 | −6% (Sep 8) | 2075 |
+
+D.Mon's cost isn't listed anywhere, so the tool shows only time since used for her.
+To check a cost in game, use the Workshop code JZKVS below.
 
 ## Sources
 
@@ -132,7 +148,8 @@ Coaching and economy:
   - https://www.youtube.com/watch?v=TnlKqOPnARQ
 
 Mechanics and costs:
-- Overwatch wiki, "Ultimate ability": https://overwatch.fandom.com/wiki/Ultimate_ability
+- Overwatch wiki, "Ultimate ability" (read through its API, revision 379906): https://overwatch.fandom.com/wiki/Ultimate_ability
+- Blizzard live patch notes, June to November 2026 (read in full): https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/ and the months around it
 - Blizzard patch notes, 2023/02 and 2023/12 (swap charge cap) and 2026/02, /08, /09, /10: https://overwatch.blizzard.com/en-us/news/patch-notes/
 - Old OWL ult-rate analysis (2018): https://medium.com/@Cheraws/tracer-generates-a-blistering-6-pulse-bombs-per-10-minutes-d7067d9036bd
 - Workshop code JZKVS, "Ultimate Charge Points Counter", useful for calibration: https://workshop.codes/JZKVS

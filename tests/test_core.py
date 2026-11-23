@@ -46,12 +46,12 @@ def test_reserved_word_alias_rejected(tmp_path):
     ("nade", Command("use", "ana_nade")),
     ("  Enemy  NADE ", Command("use", "ana_nade")),
     ("cancel sleep", Command("cancel", "ana_sleep")),
-    ("cancel enemy grav", Command("cancel", "zarya_ult")),
+    ("cancel enemy gravity", Command("cancel", "zarya_ult")),
     ("undo", Command("undo")),
     ("new round", Command("round")),
     ("new match", Command("reset")),
     ("reset", Command("reset")),
-    ("swap grav", Command("swap", "zarya_ult")),
+    ("swap gravity", Command("swap", "zarya_ult")),
     ("swap enemy nano", Command("swap", "ana_ult")),
     ("won fight", Command("fight", value="won")),
     ("fight lost", Command("fight", value="lost")),
@@ -172,7 +172,7 @@ def test_final_fires_when_partials_disabled(data):
 def test_final_differs_from_partial(data):
     c, sp = make_controller(data)
     c.on_text("sleep", False)
-    c.on_text("suzu", True)
+    c.on_text("bell", True)
     assert sp.events == [("used", "ana_sleep"), ("used", "kiriko_suzu")]
 
 
@@ -197,7 +197,7 @@ def test_custom_callout(tmp_path):
 
 def test_ult_snapshot_is_stable_order(data):
     c, _ = make_controller(data)
-    c.on_text("grav", True)   # zarya_ult comes after ana_ult in the data file
+    c.on_text("gravity", True)   # zarya_ult comes after ana_ult in the data file
     c.on_text("nano", True)
     snap = c.ult_snapshot()
     assert [u["id"] for u in snap["ults"]] == ["ana_ult", "zarya_ult"]
@@ -208,7 +208,7 @@ def test_phone_server_serves_page_and_status(data):
     import urllib.request
     from ow_assist.phone import PhoneServer
     c, _ = make_controller(data)
-    c.on_text("grav", True)
+    c.on_text("gravity", True)
     server = PhoneServer(c.ult_snapshot, port=0, host="127.0.0.1")
     server.start()
     try:

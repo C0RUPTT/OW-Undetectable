@@ -225,7 +225,7 @@ def main(argv=None) -> int:
 
     if args.text:
         def read_stdin():
-            print("Type commands (e.g. 'grav', 'won fight', 'status', 'swap grav', 'undo'):")
+            print("Type commands (e.g. 'gravity', 'won fight', 'status', 'swap gravity', 'undo'):")
             for line in sys.stdin:
                 if not commands.parse(line, data):
                     print("  not a command")

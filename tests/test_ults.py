@@ -116,23 +116,23 @@ def test_possible_callout_once_and_grouped(data):
     t.apply(TRANS, 0)     # save tier: never announced
     assert t.poll(100) == []
     ev, = t.poll(125)
-    assert ev.kind == "ult_possible" and ev.say == "grav and nano may be up"
+    assert ev.kind == "ult_possible" and ev.say == "gravity and nano may be up"
     assert t.poll(126) == [] and t.poll(1000) == []
 
 
 def test_fight_summary_says_used_then_threats(data):
     t = tracker(data)
     t.apply(GRAV, 0)
-    assert t.apply(Command("fight", value="won"), 20)[0].say.startswith("They used grav.")
+    assert t.apply(Command("fight", value="won"), 20)[0].say.startswith("They used gravity.")
     t.apply(NANO, 200)
     t.apply(Command("use", "genji_ult"), 200)
     ev, = t.apply(Command("fight", value="lost"), 210)
     # Grav (used at 0) is possible by 210; nano and blade were just used.
     assert ev.kind == "fight"
-    assert ev.say == "They used nano and blade. May have grav."
+    assert ev.say == "They used nano and blade. May have gravity."
     assert t.fights == [("won", 1), ("lost", 2)] and t.fight_uses == []
     ev, = t.apply(Command("fight", value="won"), 215)
-    assert ev.say.startswith("No enemy ults. May have grav.")
+    assert ev.say.startswith("No enemy ults. May have gravity.")
     t.apply(Command("undo"), 216)
     assert t.fights == [("won", 1), ("lost", 2)]
 
@@ -141,12 +141,12 @@ def test_status_line(data):
     t = tracker(data)
     assert t.apply(Command("status"), 0)[0].say == "No enemy ults tracked."
     t.apply(GRAV, 0)
-    assert t.apply(Command("status"), 1)[0].say == "Nothing likely up. grav in about 120 seconds."
-    assert t.apply(Command("status"), 60)[0].say == "Nothing likely up. grav in about 70 seconds."
+    assert t.apply(Command("status"), 1)[0].say == "Nothing likely up. gravity in about 120 seconds."
+    assert t.apply(Command("status"), 60)[0].say == "Nothing likely up. gravity in about 70 seconds."
     t.apply(TRANS, 0)
     t.apply(NANO, 0)
     # likely before possible; then engage, kill, save
-    assert t.apply(Command("status"), 240)[0].say == "May have nano, grav and trans."
+    assert t.apply(Command("status"), 240)[0].say == "May have nano, gravity and trans."
 
 
 def test_status_is_not_undoable(data):
@@ -229,7 +229,7 @@ def test_snapshot_has_estimates(data):
 
     c = Controller(data, {"call_lag_seconds": 0, "fire_on_partial": False}, Quiet(),
                    log=lambda *_: None)
-    c.on_text("grav", True)
+    c.on_text("gravity", True)
     c.on_text("won fight", True)
     snap = c.ult_snapshot()
     u, = snap["ults"]
@@ -244,16 +244,26 @@ def test_missing_words_and_unhearable(data):
     from ow_assist.voice import missing_words, unhearable
 
     class FakeModel:
-        known = {"grav", "gravity", "nano", "enemy", "cancel", "swap"}
+        known = {"gravity", "nano", "enemy", "cancel", "swap"}
 
         def vosk_model_find_word(self, w):
             return 1 if w in self.known else -1
 
-    missing = missing_words(FakeModel(), ["grav", "enemy nano", "nade", "[unk]"])
+    missing = missing_words(FakeModel(), ["gravity", "enemy nano", "nade", "[unk]"])
     assert missing == {"nade"}
-    dead, deaf = unhearable(data, {"nade", "grav"})
-    assert "nade" in dead and "grav" in dead
+    dead, deaf = unhearable(data, {"nade"})
+    assert dead == ["nade"]
     assert "Ana Biotic Grenade" not in deaf      # "grenade" still works
-    assert "Zarya Graviton Surge" not in deaf    # "gravity" still works
     _, deaf = unhearable(data, {"nano"})
     assert deaf == ["Ana Nano Boost"]
+
+
+# Checked against vosk-model-small-en-us-0.15 (Model.vosk_model_find_word): these words
+# are not in its vocabulary, so the recognizer silently drops them.
+UNHEARABLE_IN_SMALL_MODEL = {"grav", "suzu", "kitsune", "deadeye", "overclock",
+                             "panopticon", "railgun", "zarya"}
+
+
+def test_no_shipped_alias_uses_a_word_the_model_cant_hear(data):
+    for alias in data.alias_map:
+        assert not UNHEARABLE_IN_SMALL_MODEL.intersection(alias.split()), alias
