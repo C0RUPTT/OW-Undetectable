@@ -25,7 +25,9 @@ microphone. Recognition runs offline and audio is never saved.
 6. **Run it for real:** `python -m ow_assist --model models/vosk-model-small-en-us-0.15 --device N --phone`
    Open the printed address on your phone and allow the Windows network prompt.
 7. **Read the startup output.** If it says the speech model doesn't know some words,
-   those calls can't be heard. Use the second alias it lists, or add one.
+   those calls can't be heard. Pick another word for them. Optional: after changing
+   a call word, run `python tools/check_speech.py models/vosk-model-small-en-us-0.15`
+   (needs espeak-ng and numpy) to see how reliably each call is heard.
 8. **Check the cooldowns.** In a custom game, time each tracked ability and fix
    the numbers in `data/abilities.json`.
 9. **Play about 5 matches** calling only `sleep`, then see the test plan at the bottom.
@@ -89,6 +91,7 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 | any enemy ult: `gravity`, `nano`, `blade`, `trans`, `beat`, `pulse`, `noon`... (every hero, see `data/abilities.json`) | marks the ult as used and starts its estimate |
 | `enemy <alias>` | same as the alias alone |
 | `swap <ult>` | they just switched to that hero: starts its ult at 15% |
+| `<ult> ten` … `<ult> ninety`, `<ult> full` | the kill cam showed their real charge (e.g. `gravity eighty`). Sets the estimate and teaches the charge rate |
 | `won fight` / `lost fight` | ends the fight and reads the summary: what they used, then what they may still have |
 | `status` | reads out what they may have right now |
 | `cancel <alias>` | removes that timer |
@@ -104,7 +107,9 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
   return. Ults due within 10 seconds of each other are grouped: "gravity and nano may
   be up". Change which tiers speak with `ult_callout_tiers`, or set it to `[]`.
 - **Fight summary**, after `won fight` / `lost fight`: "They used gravity and nano.
-  May have blade." Or "No enemy ults. Nothing likely up. trans in about 40 seconds."
+  May have blade. Watch for nano blade." Or "No enemy ults. Nothing likely up.
+  trans in about 40 seconds." "Watch for …" names a known combo when all its parts
+  may be up. The combo list is in `data/abilities.json`.
 - **"undone" / "cleared" / "new round":** after `undo`, `cancel`, `reset` or
   `new round`, so you know the correction worked.
 - **Nothing else.** Calls themselves are silent.
@@ -128,6 +133,8 @@ has the research and sources. In short:
   - Say `won fight` / `lost fight` at the end of every fight.
   - Say `new round` when sides swap.
   - Call `swap <ult>` when you see a swap.
+  - When you die, glance at the kill cam's ult % and call it, e.g. `gravity eighty`.
+    It's the only real number you'll get.
   - Expect about the same number of ults as last fight, plus one or two.
 
 ## Tilt tracker

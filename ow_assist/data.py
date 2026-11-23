@@ -13,7 +13,9 @@ DEFAULT_RATES = ROOT / "userdata" / "ult_rates.json"
 
 # Words the command parser owns; aliases may not use them.
 RESERVED_WORDS = {"undo", "reset", "new", "round", "match", "cancel", "enemy", "their",
-                  "gg", "goal", "record", "swap", "fight", "won", "lost", "status"}
+                  "gg", "goal", "record", "swap", "fight", "won", "lost", "status",
+                  "full", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy",
+                  "eighty", "ninety"}
 TIERS = ("engage", "kill", "save", "minor")
 
 DEFAULT_SETTING_VALUES = {
@@ -73,9 +75,16 @@ class Ability:
         return f"{self.hero} {self.name}"
 
 
+@dataclass(frozen=True)
+class Combo:
+    name: str                 # what gets said, e.g. "nano blade"
+    ults: tuple[str, ...]     # ability ids that all need to be up
+
+
 class AbilityData:
-    def __init__(self, abilities: list[Ability]):
+    def __init__(self, abilities: list[Ability], combos: list[Combo] | None = None):
         self.abilities = {a.id: a for a in abilities}
+        self.combos = list(combos or [])
         self.alias_map: dict[str, str] = {}
         for a in abilities:
             for alias in a.aliases:
@@ -130,7 +139,19 @@ def load_abilities(path: Path | str = DEFAULT_ABILITIES) -> AbilityData:
     ids = [a.get("id") for a in raw["abilities"]]
     if len(ids) != len(set(ids)):
         raise DataError("duplicate ability ids")
-    return AbilityData([_parse_ability(a) for a in raw["abilities"]])
+    abilities = [_parse_ability(a) for a in raw["abilities"]]
+    by_id = {a.id: a for a in abilities}
+    combos = []
+    for c in raw.get("combos", []):
+        try:
+            name, ults = c["name"], tuple(c["ults"])
+        except (KeyError, TypeError):
+            raise DataError(f"combo {c!r} needs 'name' and 'ults'") from None
+        bad = [u for u in ults if u not in by_id or by_id[u].kind != "ult"]
+        if len(ults) < 2 or bad:
+            raise DataError(f"combo '{name}': needs 2+ known ult ids (bad: {bad})")
+        combos.append(Combo(name, ults))
+    return AbilityData(abilities, combos)
 
 
 def load_settings(path: Path | str = DEFAULT_SETTINGS) -> dict:

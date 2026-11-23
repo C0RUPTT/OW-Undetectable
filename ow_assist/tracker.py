@@ -16,7 +16,7 @@ GROUP_CALLOUT_SECONDS = 10.0  # ults due this close together are announced in on
 
 @dataclass(frozen=True)
 class Event:
-    # "used", "ready", "cancelled", "undone", "reset", "round", "swapped", "fight",
+    # "used", "ready", "cancelled", "undone", "reset", "round", "swapped", "seen", "fight",
     # "status", "ult_possible", "nothing"
     kind: str
     ability_id: str | None = None
@@ -27,7 +27,7 @@ class Event:
 class UltStatus:
     ability: Ability
     elapsed: float       # seconds since the anchor (use, swap or round start)
-    anchor: str          # "used", "swap" or "round"
+    anchor: str          # "used", "swap", "seen" (kill cam) or "round"
     state: str           # see estimate.STATES
     possible_in: float   # seconds until possible (0 once it is)
     likely_in: float     # seconds until likely (0 once it is)
@@ -43,7 +43,7 @@ class Status:
 @dataclass
 class _Anchor:
     at: float
-    kind: str              # "used", "swap", "round"
+    kind: str              # "used", "swap", "seen", "round"
     start_points: float = 0.0
     announced: bool = False
 
@@ -160,6 +160,24 @@ class Tracker:
                                          start_points=self.swap_kept * ability.cost)
             return [Event("swapped", ability.id)]
 
+        if cmd.kind == "seen":
+            # The kill cam showed their real charge: the best data point there is.
+            if ability.kind != "ult":
+                return [Event("nothing", ability.id)]
+            self._snapshot()
+            pct = min(100, int(cmd.value)) / 100.0
+            prev = s.ults.get(ability.id)
+            if prev and self.learn_rates and ability.cost and pct >= 0.3:
+                win = self._window(ability, prev)
+                rate = estimate.observed_rate(pct * ability.cost, prev.start_points,
+                                              now - prev.at, win[1])
+                if rate is not None:
+                    s.samples.append(rate)
+                    del s.samples[:-estimate.MAX_SAMPLES]
+            s.ults[ability.id] = _Anchor(now, "seen", start_points=pct * ability.cost,
+                                         announced=pct >= 1.0)
+            return [Event("seen", ability.id)]
+
         used_at = now - self.call_lag
         if ability.kind != "ult":
             self._snapshot()
@@ -271,7 +289,10 @@ class Tracker:
             return "Nothing likely up."
         names = [u.ability.aliases[0] for u in ups[:limit]]
         more = f", plus {len(ups) - limit} more" if len(ups) > limit else ""
-        return f"May have {_join(names)}{more}."
+        up_ids = {u.ability.id for u in ups}
+        combo = next((c for c in self.data.combos if up_ids.issuperset(c.ults)), None)
+        watch = f" Watch for {combo.name}." if combo else ""
+        return f"May have {_join(names)}{more}.{watch}"
 
     def status_line(self, now: float) -> str:
         if not self.s.ults:

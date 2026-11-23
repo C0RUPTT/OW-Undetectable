@@ -11,11 +11,14 @@ NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
 RESULTS = {"gg win": "win", "gg loss": "loss", "gg draw": "draw"}
 FIGHTS = {"won fight": "won", "fight won": "won", "lost fight": "lost", "fight lost": "lost"}
 TILT_KINDS = {"result", "goal", "record"}
+# "<ult> eighty" / "<ult> full": the kill cam showed their real ult charge.
+PERCENTS = {"ten": 10, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
+            "seventy": 70, "eighty": 80, "ninety": 90, "full": 100}
 
 
 @dataclass(frozen=True)
 class Command:
-    # "use", "cancel", "swap", "undo", "reset", "round", "fight", "status",
+    # "use", "cancel", "swap", "seen", "undo", "reset", "round", "fight", "status",
     # "result", "goal", "record"
     kind: str
     ability_id: str | None = None
@@ -56,6 +59,11 @@ def parse(text: str, data: AbilityData) -> Command | None:
     for filler in FILLERS:
         if t.startswith(filler):
             t = t[len(filler):]
+    if kind == "use" and " " in t:
+        rest, last = t.rsplit(" ", 1)
+        aid = data.alias_map.get(rest)
+        if last in PERCENTS and aid and data.get(aid).kind == "ult":
+            return Command("seen", aid, value=PERCENTS[last])
     ability_id = data.alias_map.get(t)
     return Command(kind, ability_id) if ability_id else None
 
@@ -67,4 +75,6 @@ def grammar(data: AbilityData) -> list[str]:
     phrases.update(f"goal {n} games" for n in NUMBERS)
     for alias in data.alias_map:
         phrases.update({alias, f"enemy {alias}", f"cancel {alias}", f"swap {alias}"})
+        if data.get(data.alias_map[alias]).kind == "ult":
+            phrases.update(f"{alias} {p}" for p in PERCENTS)
     return sorted(phrases) + ["[unk]"]

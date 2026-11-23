@@ -161,7 +161,7 @@ def test_threat_list_caps_at_three(data):
     t = tracker(data)
     for a in ("zarya_ult", "ana_ult", "zen_ult", "genji_ult", "rein_ult"):
         t.apply(Command("use", a), 0)
-    assert t.status_line(1000).endswith("plus 2 more.")
+    assert t.status_line(1000).endswith("plus 2 more. Watch for nano blade.")
 
 
 # --- calibration ---------------------------------------------------------------
@@ -261,9 +261,84 @@ def test_missing_words_and_unhearable(data):
 # Checked against vosk-model-small-en-us-0.15 (Model.vosk_model_find_word): these words
 # are not in its vocabulary, so the recognizer silently drops them.
 UNHEARABLE_IN_SMALL_MODEL = {"grav", "suzu", "kitsune", "deadeye", "overclock",
-                             "panopticon", "railgun", "zarya"}
+                             "panopticon", "railgun", "zarya", "shion"}
 
 
 def test_no_shipped_alias_uses_a_word_the_model_cant_hear(data):
     for alias in data.alias_map:
         assert not UNHEARABLE_IN_SMALL_MODEL.intersection(alias.split()), alias
+
+
+# --- kill cam and combos ------------------------------------------------------------
+
+@pytest.mark.parametrize("text,expected", [
+    ("gravity eighty", Command("seen", "zarya_ult", value=80)),
+    ("enemy nano full", Command("seen", "ana_ult", value=100)),
+    ("high noon ten", Command("seen", "cass_ult", value=10)),
+    ("sleep eighty", None),          # cooldowns have no charge to see
+    ("gravity eleven", None),
+])
+def test_parse_kill_cam(data, text, expected):
+    from ow_assist import commands
+    assert commands.parse(text, data) == expected
+
+
+def test_grammar_has_kill_cam_phrases_for_ults_only(data):
+    from ow_assist import commands
+    phrases = set(commands.grammar(data))
+    assert {"gravity eighty", "nano full"} <= phrases
+    assert "sleep eighty" not in phrases
+
+
+def test_kill_cam_sets_charge(data):
+    t = tracker(data)
+    t.apply(Command("seen", "zarya_ult", value=80), 100)
+    u = t.ult_status("zarya_ult", 100)
+    assert u.anchor == "seen" and u.state == "charging"
+    assert u.possible_in == pytest.approx(500 / 20)   # 20% of 2500 left at 20 pts/s
+    assert u.charge == pytest.approx(0.8)
+
+
+def test_kill_cam_full_is_likely_and_not_announced(data):
+    t = tracker(data, callout_tiers=("engage",))
+    t.apply(Command("seen", "zarya_ult", value=100), 0)
+    assert t.ult_status("zarya_ult", 0).state == "likely"
+    assert t.poll(1) == []
+    assert t.status_line(1) == "May have gravity."
+
+
+def test_kill_cam_is_undoable_and_learns(data):
+    t = Tracker(data, 0, possible_rate=16, likely_rate=11, learn_rates=True)
+    t.apply(GRAV, 0)
+    t.apply(Command("seen", "zarya_ult", value=50), 100)   # 1250 pts in 100 s
+    assert t.samples == [12.5]
+    t.apply(Command("undo"), 101)
+    assert t.samples == [] and t.ult_status("zarya_ult", 101).anchor == "used"
+
+
+def test_kill_cam_on_low_charge_doesnt_learn(data):
+    t = Tracker(data, 0, learn_rates=True)
+    t.apply(GRAV, 0)
+    t.apply(Command("seen", "zarya_ult", value=20), 100)
+    assert t.samples == []
+
+
+def test_combo_only_when_all_parts_up(data):
+    t = tracker(data)
+    t.apply(NANO, 0)
+    assert "Watch for" not in t.status_line(300)
+    t.apply(Command("use", "genji_ult"), 0)
+    assert t.status_line(300) == "May have nano and blade. Watch for nano blade."
+
+
+def test_bad_combo_rejected(tmp_path):
+    p = tmp_path / "a.json"
+    p.write_text(json.dumps({"abilities": [
+        {"id": "a", "kind": "ult", "hero": "X", "name": "A", "aliases": ["boom"]}],
+        "combos": [{"name": "x", "ults": ["a", "nope"]}]}))
+    with pytest.raises(DataError, match="nope"):
+        load_abilities(p)
+
+
+def test_shipped_combos_load(data):
+    assert data.combos[0].name == "nano blade"

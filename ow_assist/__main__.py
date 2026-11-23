@@ -14,7 +14,7 @@ from .speech import Speaker
 from .tracker import Tracker
 
 
-UNDOABLE = ("used", "cancelled", "reset", "round", "swapped", "fight")
+UNDOABLE = ("used", "cancelled", "reset", "round", "swapped", "seen", "fight")
 
 
 def load_rates(path) -> list[float]:

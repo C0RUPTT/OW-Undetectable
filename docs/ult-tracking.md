@@ -4,12 +4,20 @@ This sums up research done in November 2026 across coaching guides, Blizzard for
 threads, Reddit guides, patch notes, the Overwatch wiki and other trackers (LoL and
 Dota timers, Overwatch tools). Sources are at the bottom.
 
-Two things were checked directly against the source:
+What was read in full or tested directly:
 - **ult costs**, against the wiki and Blizzard's 2026 patch notes;
-- **call words**, against the speech model itself.
+- **call words**, against the speech model itself, including a recognition test;
+- **Dignitas's ult tracking guide**, read in full; it shaped the fight summary and
+  the kill-cam calls.
 
-The coaching material in sections 1, 3 and 4 still comes from search summaries, not
-full reads. Anything marked **unverified** came from a single weak source.
+What couldn't be read, and why:
+- **YouTube** sends this cloud server to Google's bot check, so no transcripts.
+- **Reddit** requires a login for scripts.
+- **The Blizzard forums** rate-limited after two threads.
+
+Other coaching points in sections 1, 3 and 4 come from search summaries. Anything
+marked **unverified** came from a single weak source. To add videos, paste their
+transcripts into the chat.
 
 ## 1. How to practise
 
@@ -23,8 +31,14 @@ full reads. Anything marked **unverified** came from a single weak source.
 
   The tool tags every ult with one of these tiers, plus **minor**.
 - **Count ults per fight.** If they used 2 last fight, expect 2 or 3 next fight.
-- **Report what they still have, not only what they used.** Report it after the
-  fight or in spawn, in short calls: "They used grav. Care nano." (the tool says "gravity", see section 5)
+- **After every fight, three steps (Dignitas):**
+  1. what they used;
+  2. what they still have;
+  3. what they'll most likely use next.
+
+  Their example: "Grav was used, Genji and Ana have ults, so expect Nano-Blade." The
+  tool's fight summary follows this order: "They used gravity. May have nano and
+  blade. Watch for nano blade." (the tool says "gravity", see section 5)
 - **Don't narrate charge percentages.** Call only what changes a decision.
 - **Review.** Watch replays in third person, where ult charge is visible, and check
   which ults you missed.
@@ -71,7 +85,17 @@ at today's cost. That is a pro game, though, and an upper bound.
   Bastion make no words, only a roar or beeps. The details for each hero are
   partly **unverified**, so check them in a custom game.
 - **Killfeed.** Ult kills show the ult's icon. An ult that kills nobody leaves no entry.
-- **Death cam and kill cam** show the enemy's ult status.
+- **The kill cam** shows the enemy's real ult charge (not in tournaments or scrims).
+  It's the only time you see the real number. Call `<ult> eighty` or `<ult> full`
+  and the estimate jumps to it. When that ult was called before, the gap also
+  teaches the tool this lobby's charge rate.
+- **Mirror rule (Dignitas).** If you have your ult, your counterpart probably has
+  theirs. If they're landing multi-hits and you aren't, they're ahead.
+- **Tells (Dignitas, forums).**
+  - Zarya pushes hard when she has Grav.
+  - Genji plays unusually safe when he has Blade.
+  - Expect panic ults from players about to die.
+  - Teams tend to get ults around the same time.
 - **Behaviour.** A player who suddenly takes aggressive angles usually has their ult.
   A player who goes passive is often close to it or holding it.
 
@@ -88,24 +112,45 @@ at today's cost. That is a pro game, though, and an upper bound.
 
 ## 5. Choosing callout words (speech recognition)
 
-- Vosk only hears words in its model's vocabulary and **silently drops the rest**.
-  Every alias was checked against `vosk-model-small-en-us-0.15` itself. It does
-  **not** know grav, suzu, kitsune, deadeye, overclock, panopticon, railgun or
-  zarya. So the calls are **gravity** (Zarya), **bell** (Suzu), **fox** (Kitsune),
-  **noon** (Deadeye), **sojourn** (Overclock) and **prison** (Panopticon). It does
-  know nade, cryo, nerf, nano, trans, valk, bob and the rest. The app checks again
-  at startup and warns about any alias you add that the model can't hear.
-- Use distinct words. These pairs sound alike or clash:
-  - nano / nade
-  - amp / lamp (so Baptiste's ult is only "amp matrix")
-  - surge (Zarya and Orisa)
-  - blade (Genji and Vendetta: "sunder" for Vendetta)
-  - bomb (D.Va, Tracer, Sierra)
-  - matrix (also D.Va's Defense Matrix)
+Every call was tested twice against `vosk-model-small-en-us-0.15`.
 
-  Two-syllable words are recognized more reliably than one-syllable ones.
+**1. Is the word in the model at all?** Vosk silently drops words it doesn't know.
+It doesn't know these: grav, suzu, kitsune, deadeye, overclock, panopticon, railgun,
+zarya, shion. The app re-checks at startup and warns about any alias you add.
+
+**2. Is it heard correctly?** `tools/check_speech.py` speaks every call with a
+synthetic voice, at 6 speeds, accents and noise levels. Each clip goes through the
+app's real recognizer and parser. The first draft's misses:
+- **valk** was heard as "bell" every time, which would log Kiriko's Suzu instead
+  of Valkyrie.
+- **spree** was heard as "three".
+- **tectonic**, **hog**, **terra** and **e m p** were unreliable.
+
+The final set scores 97.5%. The remaining misses are almost all in the heaviest-noise
+runs, which push-to-talk avoids.
+
+| Hero | Call | Instead of |
+|---|---|---|
+| Zarya | gravity | grav |
+| Kiriko | bell (Suzu), fox rush | suzu, kitsune |
+| Cassidy | noon / high noon | deadeye |
+| Sojourn | sojourn | overclock |
+| Domina | prison | panopticon |
+| Mercy | valkyrie | valk |
+| Venture | quake | tectonic |
+| Roadhog | roadhog | hog |
+| Sombra | blackout | EMP |
+| Shion | slaughter | spree, satsuriku |
+| Orisa | surge | terra |
+| Illari | captive | captive sun (the second word was sometimes lost) |
+
+Other rules:
+- Avoid pairs that sound alike or clash: nano / nade, amp / lamp (so Baptiste's ult
+  is "amp matrix"), blade (Genji vs Vendetta, who is "sunder").
 - Team comms contain the same words as your commands, so use **push-to-talk**.
-  Saying an ult twice within 8 seconds is treated as one call.
+  Saying an ult twice within 8 seconds counts as one call.
+- A synthetic voice isn't yours. Rerun `tools/check_speech.py` after changing a word,
+  and trust real games over it.
 
 ## Ult costs used (points)
 
@@ -146,6 +191,11 @@ Coaching and economy:
   - https://www.youtube.com/watch?v=8sC5D1dP6sU
   - https://www.youtube.com/watch?v=gKYMjs3R-bM
   - https://www.youtube.com/watch?v=TnlKqOPnARQ
+
+Read in full this time:
+- Dignitas, "Be ready! A guide to ultimate tracking in Overwatch"
+- Blizzard forums, "How do you predict Zarya Grav?" (May 2026): https://us.forums.blizzard.com/en/overwatch/t/how-do-you-predict-zarya-grav/1020732
+- Blizzard forums, "Ult Charge Decay" (Feb 2026): https://us.forums.blizzard.com/en/overwatch/t/ult-charge-decay/1000134. It confirms an ult is spent in full when cast, with no partial refund on death. Moira's Coalescence has been the exception since June 2026.
 
 Mechanics and costs:
 - Overwatch wiki, "Ultimate ability" (read through its API, revision 379906): https://overwatch.fandom.com/wiki/Ultimate_ability

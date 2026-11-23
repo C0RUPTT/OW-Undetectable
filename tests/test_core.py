@@ -57,7 +57,7 @@ def test_reserved_word_alias_rejected(tmp_path):
     ("fight lost", Command("fight", value="lost")),
     ("status", Command("status")),
     ("gravity", Command("use", "zarya_ult")),
-    ("e m p", Command("use", "sombra_ult")),
+    ("blackout", Command("use", "sombra_ult")),
     ("amp matrix", Command("use", "bap_ult")),
     ("[unk]", None),
     ("", None),

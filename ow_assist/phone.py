@@ -87,7 +87,7 @@ function renderSession() {
 }
 const LABEL = {used: "used", charging: "may be up in", possible: "may be up", likely: "likely up",
                unknown: "used"};
-const ANCHOR = {used: "", swap: " · swapped", round: " · new round"};
+const ANCHOR = {used: "", swap: " · swapped", seen: " · kill cam", round: " · new round"};
 function stateNow(u, dt) {
   if (u.state === "unknown") return u.elapsed + dt < FRESH_SECONDS && u.anchor === "used" ? "used" : "unknown";
   if (u.likely_in - dt <= 0) return "likely";
