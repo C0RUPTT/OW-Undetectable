@@ -33,8 +33,8 @@ DEFAULT_SETTING_VALUES = {
     "long_session_minutes": 120,
     "session_end_grace_seconds": 120,
     "session_gap_minutes": 60,
-    "ult_possible_rate": 16.0,
-    "ult_likely_rate": 11.0,
+    "ult_possible_rate": 22.0,
+    "ult_likely_rate": 15.0,
     "ult_learn_rates": True,
     "ult_swap_kept_fraction": 0.15,
     "ult_repeat_ignore_seconds": 8.0,
@@ -60,6 +60,8 @@ class Ability:
     custom_callout: str | None = None
     cost: float = 0.0      # ult points; 0 = unknown, then only "time since used" is shown
     tier: str = "minor"    # ult priority: engage, kill, save or minor
+    charge_factor: float = 1.0  # how fast this hero charges vs the median hero (OWL data)
+    hold: float = 25.0          # typical seconds a full ult is held before use (OWL data)
 
     @property
     def recharge_seconds(self) -> float:
@@ -129,10 +131,14 @@ def _parse_ability(raw: dict) -> Ability:
     tier = raw.get("tier", "minor")
     if tier not in TIERS:
         raise DataError(f"{aid}: tier must be one of {', '.join(TIERS)}")
+    factor = float(raw.get("charge_factor", 1.0))
+    if not 0.3 <= factor <= 3.0:
+        raise DataError(f"{aid}: charge_factor should be between 0.3 and 3")
     return Ability(
         id=aid, kind=kind, hero=hero, name=name, aliases=aliases,
         cooldown=cooldown, starts=starts, effect=float(raw.get("effect", 0)),
         custom_callout=raw.get("callout"), cost=cost, tier=tier,
+        charge_factor=factor, hold=float(raw.get("hold", 25.0)),
     )
 
 

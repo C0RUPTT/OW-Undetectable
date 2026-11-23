@@ -125,9 +125,13 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 Built from coaching guides and patch data. **[docs/ult-tracking.md](docs/ult-tracking.md)**
 has the research and sources. In short:
 
-- **Every ult has a cost and a tier** (engage, kill, save, minor). The estimate is
-  `cost / 16` seconds to "may be up" and `cost / 11` to "likely up", since real
-  matches charge at about 2-3× the 5 points/s passive rate.
+- **Every ult has a cost, a tier** (engage, kill, save, minor) **and a charge speed.**
+  "May be up" comes at `cost / (22 × factor)` seconds and "likely up" at
+  `cost / (15 × factor)`.
+  - The rates come from Overwatch League stats: pros charged at a median of 4× the
+    5 points/s passive rate. The defaults are set a little below that for ranked.
+  - `factor` is the hero's own speed from the same data, e.g. Brigitte 1.4 and
+    Winston 0.75.
 - **It learns your games.** Each time you call the same ult again, the gap between
   calls tunes the rates. They are saved in `userdata/ult_rates.json`, and the phone
   footer shows how many samples it has.
@@ -219,7 +223,8 @@ them. Add or remove abilities and aliases.
 ## Settings (`data/settings.json`)
 
 - `ult_possible_rate` / `ult_likely_rate`: points per second used for "may be up" and
-  "likely up" (defaults 16 and 11). `ult_learn_rates`: tune them from your games.
+  "likely up" for a median hero (defaults 22 and 15). `ult_learn_rates`: tune them
+  from your games. Each ult's `charge_factor` and `hold` are in `data/abilities.json`.
 - `ult_swap_kept_fraction`: charge kept on a hero swap (0.15).
 - `ult_repeat_ignore_seconds`: the same ult called again within this many seconds
   counts as one call (8).

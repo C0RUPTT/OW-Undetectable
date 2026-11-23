@@ -14,8 +14,23 @@ NANO = Command("use", "ana_ult")        # cost 2300, kill
 TRANS = Command("use", "zen_ult")       # cost 2500, save
 
 
+def neutral(data):
+    """Same abilities, but every hero charges at the median rate and holds for 0 s,
+    so the arithmetic in these tests stays simple."""
+    from dataclasses import replace
+
+    from ow_assist.data import AbilityData
+    return AbilityData([replace(a, charge_factor=1.0, hold=0.0)
+                        for a in data.abilities.values()], data.combos)
+
+
 @pytest.fixture
 def data():
+    return neutral(load_abilities())
+
+
+@pytest.fixture
+def shipped():
     return load_abilities()
 
 
@@ -342,3 +357,33 @@ def test_bad_combo_rejected(tmp_path):
 
 def test_shipped_combos_load(data):
     assert data.combos[0].name == "nano blade"
+
+
+# --- per-hero charge speed (Overwatch League data) --------------------------------------
+
+def test_shipped_factors_and_holds_are_sane(shipped):
+    ults = [a for a in shipped.abilities.values() if a.kind == "ult"]
+    assert all(0.7 <= a.charge_factor <= 1.45 for a in ults)
+    assert shipped.get("brig_ult").charge_factor > shipped.get("winston_ult").charge_factor
+    assert shipped.get("bastion_ult").hold > shipped.get("widow_ult").hold
+
+
+def test_faster_hero_comes_back_sooner(shipped):
+    t = Tracker(shipped, 0, possible_rate=20, likely_rate=10, learn_rates=False)
+    t.apply(Command("use", "brig_ult"), 0)      # factor 1.4, cost 2700
+    t.apply(Command("use", "winston_ult"), 0)   # factor 0.75, cost 2375
+    brig, winston = t.ult_status("brig_ult", 0), t.ult_status("winston_ult", 0)
+    assert brig.likely_after == pytest.approx(2700 / (10 * 1.4))
+    assert winston.likely_after == pytest.approx(2375 / (10 * 0.75))
+
+
+def test_learning_takes_off_hold_time_and_normalises_by_factor():
+    # 2500 pts, 125 s gap, hero holds 25 s and charges 1.25x the median:
+    # building time 100 s -> 25 pts/s for this hero -> 20 pts/s for the median hero.
+    assert estimate.observed_rate(2500, 0, 125, 250, factor=1.25, hold=25) == 20
+    # Hold never takes more than 40% of the gap.
+    assert estimate.observed_rate(600, 0, 50, 250, hold=45) == pytest.approx(600 / 30)
+
+
+def test_default_rates_follow_league_data():
+    assert estimate.DEFAULT_LIKELY_RATE == 15 and estimate.DEFAULT_POSSIBLE_RATE == 22

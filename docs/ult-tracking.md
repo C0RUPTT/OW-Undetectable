@@ -56,22 +56,50 @@ transcripts into the chat.
 | Same round | charge carries through checkpoints, deaths and overtime | standard behaviour |
 | Coach rules of thumb | "decent damage in two fights → probably has ult"; fast ults every 1-2 fights, medium every 2-3; "if enough time passes, assume it's full" | forums, guides |
 
-Old OWL data (2018) put Tracer at about 6 pulses per 10 minutes, roughly 14 points/s
-at today's cost. That is a pro game, though, and an upper bound.
+### Measured: Overwatch League charge rates
+
+The league's official Stats Lab files (2018–2020, every player, hero and map) record
+"Time Building Ultimate", "Ultimates Earned" and "Time Holding Ultimate". Combined
+with each hero's cost at the time (wiki history) and the old passive rate of 4.46
+points/s (confirmed from Dignitas's Tracer and Lúcio pure-passive times), they give
+real charge rates. This is based on about 250,000 ults:
+
+| | Charge rate as a multiple of passive |
+|---|---|
+| All heroes, median | **4.0×** (middle 60%: 3.3× to 4.9×) |
+| Supports | 5.0× (constant healing) |
+| Tanks / damage | 3.7× |
+| Fastest | Moira 7×, Brigitte 6×, Zenyatta 5.5–6×, Baptiste 5.5× |
+| Slowest | Orisa 2.8×, Winston 2.9–3.4×, Mei 3.1–3.3×, Reinhardt 3.2–3.7× |
+
+Pros also **held a full ult for about 26 seconds** (median) before using it:
+- the longest holders were Bastion (47 s), Roadhog (43 s), Pharah (40 s), Cassidy
+  (37 s), Genji, Reaper and Zenyatta (35 s);
+- the quickest were Moira (8 s), Widowmaker (10 s) and D.Va (13 s).
+
+Limits of this data: it's pro play from the 6v6 era. Ranked has less constant
+fighting, and today's tank penalty (−40% charge for hitting tanks) slows things
+further. Heroes reworked since then (Orisa, Doomfist, Sombra, Symmetra, Bastion,
+Roadhog, Moira) and heroes released after 2020 use their role's average.
 
 ### The tool's model
 
-- An ult called at time T is **possible** again after `cost / 16` seconds and
-  **likely** after `cost / 11` seconds (both rates are settings). For Grav (2500)
-  that is about 2:36 and 3:47.
+- An ult called at time T is **possible** again after `cost / (22 × factor)` seconds
+  and **likely** after `cost / (15 × factor)`. 22 and 15 points/s are 4.4× and 3×
+  passive, a little below the pro numbers above. `factor` is the hero's charge speed
+  from the league data, capped to 0.75–1.4: Brigitte 1.4, Baptiste 1.38, Zenyatta
+  1.36, … Winston 0.75; supports without data 1.2, others 0.95. For Grav (2500,
+  factor 1.2) that is about 1:35 and 2:19.
 - It always says "may be up", never "has". It knows when the ult was used, not how
   much damage the player has done since. An older Overwatch tracker, Visor, was
   criticised for presenting guesses as facts and changed its wording for that reason.
 - `swap <ult>` starts that hero at 15% charge. `new round` puts everyone back to 0
   and keeps the comp, since it usually stays the same.
 - **Self-calibration.** When you call the same ult twice, the gap between the calls
-  shows how fast this player charged. Gaps under 20 s count as a double call. Gaps
-  longer than 2.5× the "likely" time probably hide a missed call. Both are ignored.
+  shows how fast this player charged. The hero's typical hold time (from the league
+  data) is subtracted first, since the gap includes time they sat on a full ult.
+  Gaps under 20 s count as a double call. Gaps longer than 2.5× the "likely" time
+  probably hide a missed call. Both are ignored.
   The rest are blended into the rates and saved in `userdata/ult_rates.json`.
   Because an enemy may hold an ult, observed gaps run slow. So the median sets the
   "likely" rate and the 80th percentile sets the "possible" rate.
@@ -196,6 +224,14 @@ Read in full this time:
 - Dignitas, "Be ready! A guide to ultimate tracking in Overwatch"
 - Blizzard forums, "How do you predict Zarya Grav?" (May 2026): https://us.forums.blizzard.com/en/overwatch/t/how-do-you-predict-zarya-grav/1020732
 - Blizzard forums, "Ult Charge Decay" (Feb 2026): https://us.forums.blizzard.com/en/overwatch/t/ult-charge-decay/1000134. It confirms an ult is spent in full when cast, with no partial refund on death. Moira's Coalescence has been the exception since June 2026.
+
+League data:
+- Overwatch League Stats Lab, player-hero stats 2018, 2019 and 2020 (official files from Blizzard's asset server, read in full):
+  - https://assets.blz-contentstack.com/v3/assets/blt321317473c90505c/bltc1b83b55692b42f4/5e4c1368de213a0dff736e29/phs_2018.zip
+  - https://assets.blz-contentstack.com/v3/assets/blt321317473c90505c/blt034e0b484f2dae47/5e4c1369b6a7c40dd9c69e9f/phs_2019.zip
+  - https://assets.blz-contentstack.com/v3/assets/blt321317473c90505c/blt7e0ffce2b617f0d2/5ecd3a75a84f2107d1775f56/phs_2020.zip
+- Historical ult costs: Overwatch wiki "Ultimate ability" revisions of July 2018 and May 2019, read through the wiki API.
+- How to find the files: https://github.com/rd11490/owl_tutorials (getting_data).
 
 Mechanics and costs:
 - Overwatch wiki, "Ultimate ability" (read through its API, revision 379906): https://overwatch.fandom.com/wiki/Ultimate_ability

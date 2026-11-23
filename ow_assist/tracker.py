@@ -95,7 +95,8 @@ class Tracker:
     def _window(self, ability: Ability, anchor: _Anchor) -> tuple[float, float] | None:
         if not ability.cost:
             return None
-        return estimate.window(ability.cost, anchor.start_points, self.rates())
+        return estimate.window(ability.cost, anchor.start_points, self.rates(),
+                               ability.charge_factor)
 
     # --- commands --------------------------------------------------------------
     def _snapshot(self) -> None:
@@ -172,7 +173,7 @@ class Tracker:
             if prev and self.learn_rates and ability.cost and pct >= 0.3:
                 win = self._window(ability, prev)
                 rate = estimate.observed_rate(pct * ability.cost, prev.start_points,
-                                              now - prev.at, win[1])
+                                              now - prev.at, win[1], ability.charge_factor)
                 if rate is not None:
                     s.samples.append(rate)
                     del s.samples[:-estimate.MAX_SAMPLES]
@@ -193,7 +194,8 @@ class Tracker:
         if prev and self.learn_rates and ability.cost:
             win = self._window(ability, prev)
             rate = estimate.observed_rate(ability.cost, prev.start_points,
-                                          used_at - prev.at, win[1])
+                                          used_at - prev.at, win[1], ability.charge_factor,
+                                          hold=ability.hold)
             if rate is not None:
                 s.samples.append(rate)
                 del s.samples[:-estimate.MAX_SAMPLES]
@@ -245,7 +247,9 @@ class Tracker:
         possible_after, likely_after = win
         charge = 1.0
         if ability.cost:
-            charge = min(1.0, (anchor.start_points + elapsed * self.rates().likely) / ability.cost)
+            charge = min(1.0, (anchor.start_points
+                               + elapsed * self.rates().likely * ability.charge_factor)
+                         / ability.cost)
         return UltStatus(
             ability, elapsed, anchor.kind,
             estimate.state(elapsed, anchor.kind, possible_after, likely_after),

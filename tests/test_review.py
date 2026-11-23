@@ -53,8 +53,9 @@ def test_calls_are_logged_with_the_estimate_before(data, tmp_path, monkeypatch):
     assert len(used) == 2 and "before" not in used[0]
     b = used[1]["before"]
     assert b["anchor"] == "used" and b["elapsed"] == 200
-    assert b["possible_after"] == pytest.approx(2500 / 16, abs=0.1)
-    assert used[1]["rates"] == [16, 11]
+    # Zarya: 2500 pts, charge_factor 1.2, default "possible" rate 22 pts/s
+    assert b["possible_after"] == pytest.approx(2500 / (22 * 1.2), abs=0.1)
+    assert used[1]["rates"] == [22, 15]
 
 
 def test_fight_logs_ult_count_and_nothing_is_skipped(data, tmp_path):
