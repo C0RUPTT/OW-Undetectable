@@ -21,6 +21,11 @@ Kubuntu laptop.
 - **Ult costs** were checked against the wiki and Blizzard's patch notes up to
   November 2026.
 - **Mic test** (`--mic-test`) and **match review** (`--review`) are built.
+- **Laptop setup:** `scripts/laptop-setup.sh` (one-time) and `scripts/ow-tmux.sh`
+  (tmux with Claude, a shell and the app). The first run of ow-tmux.sh teleports
+  this cloud session; later runs use `claude --continue`. The user already has
+  tmux and a GitHub account. Setup instructions are in the README section "Working
+  on it from the Kubuntu laptop".
 - **Research** sources and their limits are in `docs/ult-tracking.md`.
   - Unreachable from the cloud: YouTube, Reddit, the Internet Archive.
   - These should work from the laptop's home internet.
