@@ -40,6 +40,30 @@ microphone. Recognition runs offline and audio is never saved.
 
 If anything fails, copy the full error text and send it to me.
 
+## Working on it from the Kubuntu laptop (tmux + Claude Code)
+
+First time:
+```
+sudo apt install -y gh git && gh auth login
+gh repo clone C0RUPTT/OW-Undetectable ~/OW-Undetectable
+cd ~/OW-Undetectable && git checkout claude/pensive-bell-oeo7ri
+bash scripts/laptop-setup.sh
+```
+Then open a new Konsole tab and run `claude auth login` with the same claude.ai
+account as the phone app.
+
+Every time after that: `bash ~/OW-Undetectable/scripts/ow-tmux.sh`
+
+This opens tmux with three windows:
+1. **Claude Code.** The first run pulls in the cloud session this was built in;
+   after that it reopens your last session.
+2. **A shell** with the Python environment active.
+3. **The app**, typed in and ready to run.
+
+Detach with Ctrl+b, then d.
+
+`CLAUDE.md` and `docs/STATUS.md` tell Claude where things are up to.
+
 ## Setup (Windows)
 
 1. Install Python 3.11+ and run `pip install -r requirements.txt`.

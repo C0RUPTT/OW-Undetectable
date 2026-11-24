@@ -1,0 +1,6 @@
+# For working on the app (not needed to just use it)
+pytest>=8
+# tools/check_speech.py (also needs the espeak-ng program)
+numpy>=1.26
+# research: YouTube transcripts (works from a home connection, not from cloud servers)
+youtube-transcript-api>=1.0
