@@ -45,7 +45,10 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 say "3/7 GitHub login (lets git fetch without password prompts)"
-if command -v gh >/dev/null 2>&1; then
+if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" \
+   git ls-remote origin >/dev/null 2>&1; then
+  echo "git can already reach GitHub without prompts; skipped"
+elif command -v gh >/dev/null 2>&1; then
   if ! gh auth status >/dev/null 2>&1; then
     echo "Choose: GitHub.com -> HTTPS -> Login with a web browser."
     gh auth login
