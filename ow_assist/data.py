@@ -16,7 +16,9 @@ RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their",
 
 DEFAULT_SETTING_VALUES = {
     "call_lag_seconds": 0.5,
-    "fire_on_partial": True,
+    "fire_on_partial": False,
+    "min_confidence": 0.0,
+    "require_enemy": False,
     "speech_rate": 230,
     "window_topmost": True,
     "phone_port": 8765,

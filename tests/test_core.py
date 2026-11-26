@@ -247,3 +247,35 @@ def test_alternate_aliases_resolve_to_same_ability():
     assert commands.parse("sue zoo", data).ability_id == "kiriko_suzu"
     assert commands.parse("fox", data).ability_id == "kiriko_ult"
     assert commands.parse("enemy gravity", data).ability_id == "zarya_ult"
+
+
+def test_low_confidence_final_is_skipped(data):
+    c, sp = make_controller(data, fire_on_partial=False, min_confidence=0.6)
+    c.on_text("nade", True, 0.4)
+    assert sp.events == []
+    c.on_text("nade", True, 0.9)
+    assert sp.events == [("used", "ana_nade")]
+
+
+def test_heard_text_is_logged(data):
+    lines = []
+    c = Controller(data, {"call_lag_seconds": 0, "fire_on_partial": False},
+                   FakeSpeaker(), log=lines.append)
+    c.on_text("lamp", True, 0.87)
+    c.on_text("trans", True)
+    c.on_text("", True)
+    assert lines[0] == "heard: lamp (0.87)"
+    assert "heard: trans" in lines
+
+
+def test_require_enemy_drops_bare_aliases_from_grammar(data):
+    loose = commands.grammar(data)
+    strict = commands.grammar(data, require_enemy=True)
+    assert "nade" in loose and "nade" not in strict
+    assert "enemy nade" in strict and "cancel nade" in strict and "undo" in strict
+
+
+def test_confidence_from_vosk_result():
+    from ow_assist.voice import confidence
+    assert confidence({"text": "enemy nade", "result": [{"conf": 0.9}, {"conf": 0.7}]}) == 0.7
+    assert confidence({"text": ""}) is None

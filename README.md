@@ -131,6 +131,20 @@ It runs automatically alongside the cooldown tracker.
   `session_gap_minutes` (a gap this long between results starts a new session),
   and `game_process`.
 
+## If it mishears you
+
+Every phrase it hears is printed, like `heard: enemy nade (0.91)`, with the
+recognizer's confidence from 0 to 1. Things to try, in order:
+
+1. **Use the bigger model.** Download `vosk-model-en-us-0.22-lgraph` (about
+   130 MB) from the same page, unzip it into `models/`, and run with
+   `--model models/vosk-model-en-us-0.22-lgraph`. It's much more accurate and
+   also knows `grav` and `kitsune`.
+2. **Turn on `require_enemy`** if chat sets off timers.
+3. **Set `min_confidence`** above the numbers you see on wrong `heard:` lines.
+4. **Check the mic level** in Windows Sound settings, under Recording. Speak
+   at normal volume close to the mic.
+
 ## Why these abilities
 
 The defaults are picked for Tracer, Sojourn, Genji and Cassidy: the enemy
@@ -146,7 +160,12 @@ them. Add or remove abilities and aliases.
 - `call_lag_seconds`: how many seconds are subtracted from each timer,
   because you speak after the ability is used.
 - `fire_on_partial`: acts on a call before you finish speaking, which is
-  faster. Set it to `false` if you get misfires.
+  faster but misfires more. Off by default.
+- `min_confidence`: calls the recognizer is less sure of than this (0 to 1)
+  are skipped. `0` keeps everything. Use the numbers on the `heard:` lines to
+  pick a value.
+- `require_enemy`: when `true`, only "enemy nade" starts a timer, never plain
+  "nade". This stops chat with your team from setting off timers.
 - `speech_rate`: how fast callouts are spoken.
 - `window_topmost`: keeps the optional window above other windows.
 - `phone_port`: the port the phone view uses.

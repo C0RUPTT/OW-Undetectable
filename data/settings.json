@@ -1,6 +1,8 @@
 {
   "call_lag_seconds": 0.5,
-  "fire_on_partial": true,
+  "fire_on_partial": false,
+  "min_confidence": 0.0,
+  "require_enemy": false,
   "speech_rate": 230,
   "window_topmost": true,
   "phone_port": 8765,

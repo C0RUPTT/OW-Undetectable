@@ -49,10 +49,16 @@ def parse(text: str, data: AbilityData) -> Command | None:
     return Command(kind, ability_id) if ability_id else None
 
 
-def grammar(data: AbilityData) -> list[str]:
-    """Every phrase the recognizer is allowed to hear. Fixed list = fast and accurate."""
+def grammar(data: AbilityData, require_enemy: bool = False) -> list[str]:
+    """Every phrase the recognizer is allowed to hear. Fixed list = fast and accurate.
+
+    With require_enemy, a bare alias isn't in the list, so only "enemy <alias>" starts a
+    timer and ordinary chat is much less likely to trigger one.
+    """
     phrases = {"undo", "reset", "new round", "record", "goal off", "gg loss tilted", *RESULTS}
     phrases.update(f"goal {n} games" for n in NUMBERS)
     for alias in data.alias_map:
-        phrases.update({alias, f"enemy {alias}", f"cancel {alias}"})
+        phrases.update({f"enemy {alias}", f"cancel {alias}"})
+        if not require_enemy:
+            phrases.add(alias)
     return sorted(phrases) + ["[unk]"]

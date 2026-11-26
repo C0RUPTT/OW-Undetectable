@@ -27,7 +27,7 @@ def known_phrases(phrases: list[str], find_word) -> tuple[list[str], list[str]]:
 
 class VoiceListener:
     def __init__(self, model_path: str, phrases: list[str],
-                 on_text: Callable[[str, bool], None], device=None, ptt=None):
+                 on_text: Callable[..., None], device=None, ptt=None):
         """ptt: optional (PushToTalkGate, is_held) pair. Without it the mic is always on."""
         from vosk import KaldiRecognizer, Model, SetLogLevel
 
@@ -37,6 +37,7 @@ class VoiceListener:
         if dropped:
             print("The speech model can't hear these, use another alias: " + ", ".join(dropped))
         self._rec = KaldiRecognizer(self._model, SAMPLE_RATE, json.dumps(phrases))
+        self._rec.SetWords(True)  # per-word confidence, used to skip unsure matches
         self._on_text = on_text
         self._device = device
         self._ptt = ptt
@@ -72,11 +73,21 @@ class VoiceListener:
                 for block in blocks:
                     self._recognize(block)
                 if finalize:
-                    self._on_text(json.loads(self._rec.FinalResult()).get("text", ""), True)
+                    self._final(self._rec.FinalResult())
                     self._rec.Reset()
 
     def _recognize(self, data: bytes) -> None:
         if self._rec.AcceptWaveform(data):
-            self._on_text(json.loads(self._rec.Result()).get("text", ""), True)
+            self._final(self._rec.Result())
         else:
             self._on_text(json.loads(self._rec.PartialResult()).get("partial", ""), False)
+
+    def _final(self, raw: str) -> None:
+        result = json.loads(raw)
+        self._on_text(result.get("text", ""), True, confidence(result))
+
+
+def confidence(result: dict) -> float | None:
+    """Lowest word confidence in a final result (0..1), or None if Vosk gave none."""
+    words = result.get("result") or []
+    return min(w["conf"] for w in words) if words else None

@@ -26,9 +26,19 @@ class Controller:
         self._fired_partial: str | None = None
         self.last_heard = ""
 
-    def on_text(self, text: str, final: bool) -> None:
-        """Called from the voice thread with partial and final recognition results."""
+    def on_text(self, text: str, final: bool, conf: float | None = None) -> None:
+        """Called from the voice thread with partial and final recognition results.
+
+        conf is the lowest word confidence of a final result, when the recognizer gives one.
+        """
         cmd = commands.parse(text, self.data)
+        if final and text.strip():
+            shown = f" ({conf:.2f})" if conf is not None else ""
+            self.log(f"heard: {text}{shown}" + ("" if cmd else "  -> not a command"))
+        if final and cmd and conf is not None and conf < self.settings.get("min_confidence", 0):
+            self.log(f"  -> skipped, below min_confidence {self.settings['min_confidence']}")
+            self._fired_partial = None
+            return
         if not final:
             # Fire as soon as a partial result is already a full command: shaves the
             # end-of-utterance wait off every call. The final result is then deduped.
@@ -184,8 +194,10 @@ def main(argv=None) -> int:
             button.start()
             ptt = (PushToTalkGate(tail_seconds=settings["ptt_tail_seconds"]), button.is_held)
             print(f"Push-to-talk on {settings['push_to_talk']}: hold it while you make a call.")
-        VoiceListener(args.model, commands.grammar(data), controller.on_text, device, ptt).start()
-        print("Listening. Say an alias, 'cancel <alias>', 'undo', or 'new round'.")
+        VoiceListener(args.model, commands.grammar(data, settings["require_enemy"]),
+                      controller.on_text, device, ptt).start()
+        first = "'enemy <alias>'" if settings["require_enemy"] else "an alias"
+        print(f"Listening. Say {first}, 'cancel <alias>', 'undo', or 'new round'.")
 
     if not args.window:
         try:
