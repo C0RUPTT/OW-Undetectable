@@ -230,3 +230,20 @@ def test_undo_goes_to_most_recent_action(data):
     assert c.tracker.status(0).cooldowns == []
     assert sp.said == ["Loss logged.", "Removed last loss."]
     assert c.ult_snapshot()["session"]["active"]
+
+
+def test_known_phrases_drops_out_of_vocabulary_words():
+    from ow_assist.voice import known_phrases
+    vocab = {"enemy", "cancel", "sue", "zoo", "nade"}
+    find = lambda w: 1 if w in vocab else -1
+    kept, dropped = known_phrases(
+        ["nade", "suzu", "enemy suzu", "sue zoo", "cancel sue zoo", "[unk]"], find)
+    assert kept == ["nade", "sue zoo", "cancel sue zoo", "[unk]"]
+    assert dropped == ["suzu"]
+
+
+def test_alternate_aliases_resolve_to_same_ability():
+    data = load_abilities()
+    assert commands.parse("sue zoo", data).ability_id == "kiriko_suzu"
+    assert commands.parse("fox", data).ability_id == "kiriko_ult"
+    assert commands.parse("enemy gravity", data).ability_id == "zarya_ult"

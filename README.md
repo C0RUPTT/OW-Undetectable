@@ -17,7 +17,8 @@ microphone. Recognition runs offline and audio is never saved.
    about 10 seconds later you should hear "nade is up". Then type `gg win`.
    That checks speech output without the game or mic involved.
 4. **Pick your mic:** run `python -m ow_assist --list-devices` and note your
-   headset mic's number.
+   headset mic's number. Use the one marked `MME`. Put the number itself after
+   `--device` (for example `--device 9`), not the letter N.
 5. **Set push-to-talk** (optional but recommended): set `"push_to_talk": "mouse:x2"`
    (or whichever button is free) in `data/settings.json`.
 6. **Run it for real:** `python -m ow_assist --model models/vosk-model-small-en-us-0.15 --device N --phone`
@@ -78,12 +79,16 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 
 | Say | Effect |
 |---|---|
-| `nade`, `sleep`, `suzu`, `lamp`, `grip`, `cryo` | starts that cooldown timer |
-| `nano`, `kitsune`, `amp matrix`, `beat`, `trans`, `grav`, `shatter`, `blade` | marks the ult as used, then counts up the time since |
+| `nade`, `sleep`, `sue zoo` (or `suzy`), `lamp`, `grip`, `cryo` | starts that cooldown timer |
+| `nano`, `fox`, `amp matrix`, `beat`, `trans`, `gravity` (or `graviton`), `shatter`, `blade` | marks the ult as used, then counts up the time since |
 | `enemy <alias>` | same as the alias alone |
 | `cancel <alias>` | removes that timer |
 | `undo` | reverts your last call |
 | `reset` / `new round` | clears everything |
+
+The speech model only knows real English words. At startup it lists any alias it
+can't hear (`suzu`, `kitsune`, `grav`), so use the alternatives above instead.
+If you add your own alias, check that it isn't on that list.
 
 ## What you hear
 

@@ -10,6 +10,21 @@ from typing import Callable
 SAMPLE_RATE = 16000
 
 
+def known_phrases(phrases: list[str], find_word) -> tuple[list[str], list[str]]:
+    """Split phrases into ones the model's vocabulary covers and bare words it lacks.
+
+    find_word returns -1 for a word the model doesn't know. "[unk]" is always kept.
+    """
+    kept, dropped = [], set()
+    for phrase in phrases:
+        missing = [w for w in phrase.split() if phrase != "[unk]" and find_word(w) < 0]
+        if missing:
+            dropped.update(missing)
+        else:
+            kept.append(phrase)
+    return kept, sorted(dropped)
+
+
 class VoiceListener:
     def __init__(self, model_path: str, phrases: list[str],
                  on_text: Callable[[str, bool], None], device=None, ptt=None):
@@ -18,6 +33,9 @@ class VoiceListener:
 
         SetLogLevel(-1)
         self._model = Model(model_path)
+        phrases, dropped = known_phrases(phrases, self._model.vosk_model_find_word)
+        if dropped:
+            print("The speech model can't hear these, use another alias: " + ", ".join(dropped))
         self._rec = KaldiRecognizer(self._model, SAMPLE_RATE, json.dumps(phrases))
         self._on_text = on_text
         self._device = device
