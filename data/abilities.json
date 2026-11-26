@@ -32,7 +32,7 @@
     {"id": "widow_grapple", "kind": "cooldown", "hero": "Widowmaker", "name": "Grappling Hook", "aliases": ["grapple"], "cooldown": 12, "starts": "on_use", "enabled": false},
     {"id": "hanzo_sonic", "kind": "cooldown", "hero": "Hanzo", "name": "Sonic Arrow", "aliases": ["sonic"], "cooldown": 12, "starts": "on_use", "enabled": false},
     {"id": "ashe_coach", "kind": "cooldown", "hero": "Ashe", "name": "Coach Gun", "aliases": ["coach gun"], "cooldown": 10, "starts": "on_use", "enabled": false},
-    {"id": "genji_deflect", "kind": "cooldown", "hero": "Genji", "name": "Deflect", "aliases": ["deflect"], "cooldown": 8, "starts": "on_use", "enabled": false},
+    {"id": "genji_deflect", "kind": "cooldown", "hero": "Genji", "name": "Deflect", "aliases": ["deflect"], "cooldown": 8, "starts": "on_use", "enabled": true},
     {"id": "pharah_concussive", "kind": "cooldown", "hero": "Pharah", "name": "Concussive Blast", "aliases": ["concussive"], "cooldown": 9, "starts": "on_use", "enabled": false},
     {"id": "reaper_wraith", "kind": "cooldown", "hero": "Reaper", "name": "Wraith Form", "aliases": ["wraith"], "cooldown": 8, "starts": "on_use", "enabled": false},
     {"id": "torb_overload", "kind": "cooldown", "hero": "Torbjorn", "name": "Overload", "aliases": ["overload"], "cooldown": 12, "starts": "on_use", "enabled": false},
