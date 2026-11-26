@@ -66,19 +66,20 @@ def test_grammar_covers_every_parseable_phrase(data):
 
 
 def test_cooldown_ready(data):
+    cd = data.get("ana_nade").cooldown
     t = Tracker(data, call_lag=0)
     assert kinds(t.apply(Command("use", "ana_nade"), 100)) == [("used", "ana_nade")]
-    assert t.poll(109.9) == []
-    assert kinds(t.poll(110)) == [("ready", "ana_nade")]
-    assert t.poll(111) == []  # announced once
-    assert t.status(110).cooldowns == []
+    assert t.poll(100 + cd - 0.1) == []
+    assert kinds(t.poll(100 + cd)) == [("ready", "ana_nade")]
+    assert t.poll(101 + cd) == []  # announced once
+    assert t.status(100 + cd).cooldowns == []
 
 
 def test_call_lag_shortens_remaining(data):
     t = Tracker(data, call_lag=0.5)
     t.apply(Command("use", "ana_nade"), 100)
     (_, remaining), = t.status(100).cooldowns
-    assert remaining == pytest.approx(9.5)
+    assert remaining == pytest.approx(data.get("ana_nade").cooldown - 0.5)
 
 
 def test_after_effect_adds_duration(data):
@@ -91,11 +92,12 @@ def test_after_effect_adds_duration(data):
 
 
 def test_recall_restarts_timer(data):
+    cd = data.get("ana_nade").cooldown
     t = Tracker(data, call_lag=0)
     t.apply(Command("use", "ana_nade"), 0)
-    t.apply(Command("use", "ana_nade"), 9)
-    assert t.poll(18) == []
-    assert kinds(t.poll(19)) == [("ready", "ana_nade")]
+    t.apply(Command("use", "ana_nade"), 9)  # called again before it was back
+    assert t.poll(9 + cd - 1) == []
+    assert kinds(t.poll(9 + cd)) == [("ready", "ana_nade")]
 
 
 def test_ult_tracks_elapsed(data):
