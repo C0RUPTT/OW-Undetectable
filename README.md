@@ -79,7 +79,7 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
 
 | Say | Effect |
 |---|---|
-| `nade`, `sleep`, `sue zoo` (or `suzy`), `lamp`, `grip`, `cryo` | starts that cooldown timer |
+| `nade`, `sleep`, `sue zoo` (or `suzy`), `lamp`, `grip`, `cryo`, `recall` (or `tracer recall`) | starts that cooldown timer |
 | `nano`, `fox`, `amp matrix`, `beat`, `trans`, `gravity` (or `graviton`), `shatter`, `blade` | marks the ult as used, then counts up the time since |
 | `enemy <alias>` | same as the alias alone |
 | `cancel <alias>` | removes that timer |

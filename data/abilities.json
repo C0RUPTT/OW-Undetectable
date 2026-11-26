@@ -6,6 +6,7 @@
     {"id": "kiriko_suzu", "kind": "cooldown", "hero": "Kiriko", "name": "Protection Suzu", "aliases": ["suzu", "sue zoo", "suzy"], "cooldown": 15, "starts": "on_use"},
     {"id": "bap_lamp", "kind": "cooldown", "hero": "Baptiste", "name": "Immortality Field", "aliases": ["lamp"], "cooldown": 25, "starts": "on_use"},
     {"id": "lw_grip", "kind": "cooldown", "hero": "Lifeweaver", "name": "Life Grip", "aliases": ["grip"], "cooldown": 19, "starts": "on_use"},
+    {"id": "tracer_recall", "kind": "cooldown", "hero": "Tracer", "name": "Recall", "aliases": ["recall", "tracer recall"], "cooldown": 12, "starts": "on_use"},
     {"id": "mei_cryo", "kind": "cooldown", "hero": "Mei", "name": "Cryo-Freeze", "aliases": ["cryo"], "cooldown": 12, "starts": "on_use"},
     {"id": "ana_ult", "kind": "ult", "hero": "Ana", "name": "Nano Boost", "aliases": ["nano"]},
     {"id": "kiriko_ult", "kind": "ult", "hero": "Kiriko", "name": "Kitsune Rush", "aliases": ["kitsune", "fox"]},
