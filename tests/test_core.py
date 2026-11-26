@@ -279,3 +279,32 @@ def test_confidence_from_vosk_result():
     from ow_assist.voice import confidence
     assert confidence({"text": "enemy nade", "result": [{"conf": 0.9}, {"conf": 0.7}]}) == 0.7
     assert confidence({"text": ""}) is None
+
+
+def test_sapi_rate_mapping():
+    from ow_assist.speech import sapi_rate
+    assert sapi_rate(180) == 0
+    assert sapi_rate(230) == 2
+    assert sapi_rate(1000) == 10 and sapi_rate(0) == -9
+
+
+def test_speaker_keeps_talking_after_an_error(data):
+    import time
+    from ow_assist.speech import Speaker
+    spoken, logs = [], []
+    sp = Speaker(data, enabled=False, log=logs.append)
+    sp._q = __import__("queue").Queue()
+
+    def flaky(text):
+        if text == "boom":
+            raise RuntimeError("audio device lost")
+        spoken.append(text)
+    __import__("threading").Thread(target=sp._run, args=(flaky,), daemon=True).start()
+    for t in ["nade is up", "boom", "nade is up"]:
+        sp.say(t)
+    for _ in range(100):
+        if len(spoken) == 2:
+            break
+        time.sleep(0.01)
+    assert spoken == ["nade is up", "nade is up"]
+    assert logs and "speech error" in logs[0]

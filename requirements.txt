@@ -2,6 +2,7 @@ sounddevice>=0.4.6
 vosk>=0.3.45
 # text-to-speech for "sleep is up" callouts
 pyttsx3>=2.90
+pywin32; sys_platform == "win32"
 # push-to-talk button (only used when push_to_talk is set)
 pynput>=1.7
 # notices when the game opens/closes for session tracking
