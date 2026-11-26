@@ -4,3 +4,4 @@ __pycache__/
 models/
 .pytest_cache/
 userdata/
+my_settings.json

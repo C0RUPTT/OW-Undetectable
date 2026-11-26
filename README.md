@@ -1,51 +1,75 @@
 # OW Assist: voice cooldown tracker (prototype)
 
-You call out enemy abilities as you see them used ("nade", "suzu", "grav").
+You call out enemy abilities as you see them used ("nade", "sleep", "gravity").
 The app times them and says "nade is up" in your headset when each one is back.
 Nothing plays when you make a call. Your confirmation is the callout arriving later.
 
 **It never reads, hooks, or draws over the game.** The only input is your
 microphone. Recognition runs offline and audio is never saved.
 
-## When you get home: first-run checklist
+## Install (Windows, once)
 
-1. **Install.** Install Python 3.11+ (tick "Add to PATH"), open a terminal in
-   this folder and run `pip install -r requirements.txt`.
-2. **Get the speech model.** Download `vosk-model-small-en-us-0.15` from the
-   Vosk models page (alphacephei.com/vosk/models) and unzip it to `models/`.
-3. **Dry run without the mic:** `python -m ow_assist --text`. Type `nade`, and
-   about 10 seconds later you should hear "nade is up". Then type `gg win`.
-   That checks speech output without the game or mic involved.
-4. **Pick your mic:** run `python -m ow_assist --list-devices` and note your
-   headset mic's number. Use the one marked `MME`. Put the number itself after
-   `--device` (for example `--device 9`), not the letter N.
-5. **Set push-to-talk** (optional but recommended): set `"push_to_talk": "mouse:x2"`
-   (or whichever button is free) in `data/settings.json`.
-6. **Run it for real:** `python -m ow_assist --model models/vosk-model-small-en-us-0.15 --device N --phone`
-   Open the printed address on your phone and allow the Windows network prompt.
-7. **Check the cooldowns.** In a custom game, time each tracked ability and fix
-   the numbers in `data/abilities.json`.
-8. **Play about 5 matches** calling only `sleep`, then see the test plan at the bottom.
+1. Install **Python 3.11+** (tick "Add Python to PATH") and **Git for Windows**
+   (git-scm.com, default options are fine).
+2. Open a terminal on your Desktop and download the app:
+   ```
+   git clone -b claude/focused-babbage-t6gmsr https://github.com/C0RUPTT/OW-Undetectable.git ow-assist
+   cd ow-assist
+   pip install -r requirements.txt
+   ```
+   The first time, a browser window asks you to sign in to GitHub.
+3. Get the speech model (about 130 MB) into `models/`:
+   ```
+   mkdir models
+   curl -L -o lgraph.zip https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip
+   tar -xf lgraph.zip -C models
+   del lgraph.zip
+   ```
+4. Create **`my_settings.json`** in the `ow-assist` folder with your mic and the phone view:
+   ```json
+   {
+     "device": 9,
+     "phone": true
+   }
+   ```
+   Find your mic's number with `python -m ow_assist --list-devices` (use the `MME` one).
 
-If anything fails, copy the full error text and send it to me.
+## Every day
 
-## Setup (Windows)
+- **Start it:** double-click **`run.bat`**.
+- **Update it:** double-click **`update.bat`**. Your `my_settings.json`, models
+  and game history are never touched by updates.
 
-1. Install Python 3.11+ and run `pip install -r requirements.txt`.
-2. Download the small English Vosk model (`vosk-model-small-en-us-0.15`, ~40 MB)
-   from the Vosk models page (alphacephei.com/vosk/models) and unzip it to `models/`.
-3. Run: `python -m ow_assist --model models/vosk-model-small-en-us-0.15`
+## Your settings: `my_settings.json`
 
-Other options:
-- `--list-devices` / `--device N` to pick your mic
-- `--window` to show the status window. Off by default; its only real use is
-  seeing how long ago each ult was used.
-- `--text` to type commands instead of speaking, and `--mute` to turn off speech
+Put anything you want to change in `my_settings.json`, not in
+`data/settings.json`. Updates replace the files in `data/`, but never yours.
+Anything you leave out uses the default. Example:
+
+```json
+{
+  "device": 9,
+  "phone": true,
+  "require_enemy": true,
+  "turn_on": ["hook", "emp", "teleport"],
+  "turn_off": ["lamp"]
+}
+```
+
+## Choosing which abilities to track
+
+`python -m ow_assist --list-abilities` (or `run.bat --list-abilities`) lists
+every ability, whether it's on, and what to say for it. To change one, put
+any of its names in `turn_on` or `turn_off` in `my_settings.json`.
+
+Keep the list short: every extra word is one more thing the recognizer can
+confuse with what you or your team say. A good start is the few abilities that
+decide fights for your heroes.
 
 ## Push-to-talk
 
 By default the mic is always listening. To listen only while you hold a button,
-set `push_to_talk` in `data/settings.json`:
+set `push_to_talk` in `my_settings.json`:
 
 - `"mouse:x2"` or `"mouse:x1"`: mouse side buttons (recommended)
 - `"mouse:middle"`
@@ -60,8 +84,11 @@ watches the button the same way Discord's push-to-talk does.
 
 ## Phone view (ult timers)
 
-Run with `--phone`. The app prints an address like `http://192.168.1.20:8765`.
-Open it on your phone, which must be on the same Wi-Fi as your PC.
+Set `"phone": true` in `my_settings.json` (or run with `--phone`). At startup
+the app prints an address like `http://192.168.1.20:8765`. Type it into your
+phone's browser; the phone must be on the same Wi-Fi as your PC. Bookmark it or
+add it to your home screen: the address stays the same unless your router
+gives your PC a new one.
 
 - Each enemy ult you've called shows a live "time since used" counter.
   It's highlighted orange for the first 15 seconds, so fresh ults stand out.
@@ -73,22 +100,22 @@ Open it on your phone, which must be on the same Wi-Fi as your PC.
   the screen awake by itself, because browsers only allow that on https pages.
 - The page is read-only. It can show the ult timers but can't change anything.
   Anyone on your Wi-Fi who opens the address could see them too.
-- Change the port with `phone_port` in `data/settings.json`.
+- Change the port with `phone_port` in `my_settings.json`.
 
 ## Commands
 
 | Say | Effect |
 |---|---|
-| `nade`, `sleep`, `sue zoo` (or `suzy`), `lamp`, `grip`, `cryo`, `recall` (or `tracer recall`) | starts that cooldown timer |
-| `nano`, `fox`, `amp matrix`, `beat`, `trans`, `gravity` (or `graviton`), `shatter`, `blade` | marks the ult as used, then counts up the time since |
+| a cooldown's name (`nade`, `sleep`, `recall`...) | starts that cooldown timer |
+| an ult's name (`nano`, `gravity`, `blade`...) | marks the ult as used, then counts up the time since |
 | `enemy <alias>` | same as the alias alone |
 | `cancel <alias>` | removes that timer |
 | `undo` | reverts your last call |
 | `reset` / `new round` | clears everything |
 
-The speech model only knows real English words. At startup it lists any alias it
-can't hear (`suzu`, `kitsune`, `grav`), so use the alternatives above instead.
-If you add your own alias, check that it isn't on that list.
+`--list-abilities` shows every name you can say. The speech model only knows
+real words: at startup it lists any name it can't hear (like `suzu`), so use
+another name for that ability (`sue zoo`).
 
 ## What you hear
 
@@ -136,10 +163,7 @@ It runs automatically alongside the cooldown tracker.
 Every phrase it hears is printed, like `heard: enemy nade (0.91)`, with the
 recognizer's confidence from 0 to 1. Things to try, in order:
 
-1. **Use the bigger model.** Download `vosk-model-en-us-0.22-lgraph` (about
-   130 MB) from the same page, unzip it into `models/`, and run with
-   `--model models/vosk-model-en-us-0.22-lgraph`. It's much more accurate and
-   also knows `grav` and `kitsune`.
+1. **Track fewer abilities.** Fewer words means fewer mix-ups.
 2. **Turn on `require_enemy`** if chat sets off timers.
 3. **Set `min_confidence`** above the numbers you see on wrong `heard:` lines.
 4. **Check the mic level** in Windows Sound settings, under Recording. Speak
@@ -147,15 +171,20 @@ recognizer's confidence from 0 to 1. Things to try, in order:
 
 ## Why these abilities
 
-The defaults are picked for Tracer, Sojourn, Genji and Cassidy: the enemy
-cooldowns that stop your dive (sleep, cryo) or save your target (suzu, lamp,
-grip, nade's anti-heal decides duels). Edit `data/abilities.json` to change
-them. Add or remove abilities and aliases.
+The ones on by default are picked for Tracer, Sojourn, Genji and Cassidy: the
+enemy cooldowns that stop your dive (sleep, cryo, recall) or save your target
+(suzu, lamp, grip, nade's anti-heal decides duels).
 
-> **The cooldown numbers are unverified estimates.** Check each one against the
-> current patch and fix it in `data/abilities.json`.
+> **The cooldown numbers are unverified estimates.** Time them in a custom game
+> and put the right ones in `my_settings.json`, by any of the ability's names:
+> `"cooldowns": {"sleep": 15, "recall": 13}`.
 
-## Settings (`data/settings.json`)
+## All settings
+
+Set any of these in `my_settings.json`.
+
+- `model`: the speech model folder. `device`: your mic's number. `phone`: `true` for the phone view.
+- `turn_on`, `turn_off`, `cooldowns`: see above.
 
 - `call_lag_seconds`: how many seconds are subtracted from each timer,
   because you speak after the ability is used.

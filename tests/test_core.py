@@ -308,3 +308,50 @@ def test_speaker_keeps_talking_after_an_error(data):
         time.sleep(0.01)
     assert spoken == ["nade is up", "nade is up"]
     assert logs and "speech error" in logs[0]
+
+
+def test_switched_off_abilities_are_not_tracked():
+    data = load_abilities()
+    assert "hog_hook" not in data.abilities and "hook" not in data.alias_map
+    assert commands.parse("hook", data) is None
+    assert "hook" not in commands.grammar(data)
+
+
+def test_turn_on_and_off_by_alias_or_id():
+    data = load_abilities(turn_on=["hook", "sombra_ult"], turn_off=["Lamp"])
+    assert commands.parse("hook", data).ability_id == "hog_hook"
+    assert "sombra_ult" in data.abilities
+    assert "bap_lamp" not in data.abilities
+
+
+def test_unknown_switch_name_is_an_error():
+    with pytest.raises(DataError, match="hookk"):
+        load_abilities(turn_on=["hookk"])
+
+
+def test_library_aliases_unique_and_known_reserved_words_avoided():
+    from ow_assist.data import load_library
+    lib = load_library()
+    assert len(lib) > 60
+    assert len(load_abilities(turn_on=[a.id for a in lib]).abilities) == len(lib)
+
+
+def test_my_settings_override_shared_settings(tmp_path):
+    from ow_assist.data import load_settings
+    shared = tmp_path / "settings.json"
+    shared.write_text('{"speech_rate": 200, "turn_on": ["hook"]}')
+    mine = tmp_path / "my_settings.json"
+    mine.write_text('{"speech_rate": 260, "turn_off": ["lamp"]}')
+    s = load_settings(shared, mine)
+    assert s["speech_rate"] == 260 and s["turn_on"] == ["hook"] and s["turn_off"] == ["lamp"]
+    mine.write_text('{"speech_rate": 260,}')
+    with pytest.raises(DataError, match="my_settings.json"):
+        load_settings(shared, mine)
+
+
+def test_cooldown_override_by_alias():
+    data = load_abilities(cooldowns={"sleep": 15, "tracer recall": 13.5})
+    assert data.get("ana_sleep").cooldown == 15
+    assert data.get("tracer_recall").cooldown == 13.5
+    with pytest.raises(DataError, match="positive"):
+        load_abilities(cooldowns={"sleep": 0})

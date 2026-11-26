@@ -1,14 +1,15 @@
-"""Entry point: python -m ow_assist --model models/vosk-model-small-en-us-0.15"""
+"""Entry point: python -m ow_assist (or run.bat)"""
 from __future__ import annotations
 
 import argparse
 import sys
 import threading
 import time
+from pathlib import Path
 
 from . import commands
-from .data import (DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_SETTINGS, load_abilities,
-                   load_settings)
+from .data import (ROOT, DEFAULT_ABILITIES, DEFAULT_HISTORY, DEFAULT_SETTINGS, apply_switches,
+                   load_abilities, load_library, load_settings)
 from .speech import Speaker
 from .tracker import Tracker
 
@@ -127,6 +128,17 @@ class Controller:
         self.speaker.close()
 
 
+def format_library(library) -> str:
+    lines = []
+    for kind, title in (("cooldown", "COOLDOWNS"), ("ult", "ULTS")):
+        lines.append(f"\n{title}  (use any of these names in turn_on or turn_off in my_settings.json)")
+        for a in sorted((a for a in library if a.kind == kind), key=lambda a: (not a.enabled, a.hero)):
+            cd = f" {a.cooldown:g}s" if kind == "cooldown" else ""
+            say = " / ".join(a.aliases)
+            lines.append(f"  [{'ON ' if a.enabled else 'off'}] {say:<28} {a.hero} {a.name}{cd}")
+    return "\n".join(lines).lstrip("\n")
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="ow_assist", description="Voice-driven cooldown tracker")
     p.add_argument("--model", help="path to an unzipped Vosk model folder")
@@ -136,6 +148,8 @@ def main(argv=None) -> int:
     p.add_argument("--mute", action="store_true", help="no speech (testing)")
     p.add_argument("--device", help="microphone device name or index (see --list-devices)")
     p.add_argument("--list-devices", action="store_true")
+    p.add_argument("--list-abilities", action="store_true",
+                   help="show every ability, whether it's on, and what to say")
     p.add_argument("--abilities", default=str(DEFAULT_ABILITIES))
     p.add_argument("--settings", default=str(DEFAULT_SETTINGS))
     p.add_argument("--history", default=str(DEFAULT_HISTORY), help="where game results are stored")
@@ -151,11 +165,22 @@ def main(argv=None) -> int:
         from .tilt import Store
         print(report(Store(args.history).games()))
         return 0
-    if not args.text and not args.model:
-        p.error("--model is required unless --text is used")
-
-    data = load_abilities(args.abilities)
+    if args.list_abilities:
+        s = load_settings(args.settings)
+        library = apply_switches(load_library(args.abilities), s["turn_on"], s["turn_off"],
+                                 s["cooldowns"])
+        print(format_library(library))
+        return 0
     settings = load_settings(args.settings)
+    # Command-line options win; otherwise use model/device/phone from your settings.
+    model = args.model or str(ROOT / settings["model"])
+    device_arg = args.device if args.device is not None else settings["device"]
+    if not args.text and not Path(model).is_dir():
+        p.error(f"speech model folder not found: {model}\n"
+                "Download it (see README) or point 'model' in my_settings.json at it.")
+    data = load_abilities(args.abilities, settings["turn_on"], settings["turn_off"],
+                          settings["cooldowns"])
+    print(f"Tracking {len(data.abilities)} abilities. See them all with --list-abilities.")
     if settings["push_to_talk"]:
         from .ptt import parse_binding
         parse_binding(settings["push_to_talk"])  # fail now, not mid-match
@@ -170,7 +195,7 @@ def main(argv=None) -> int:
     GameWatcher(settings["game_process"], controller.game_started, controller.game_stopped,
                 settings["session_end_grace_seconds"]).start()
 
-    if args.phone:
+    if args.phone or settings["phone"]:
         from .phone import PhoneServer
         phone = PhoneServer(controller.ult_snapshot, port=settings["phone_port"])
         phone.start()
@@ -186,7 +211,9 @@ def main(argv=None) -> int:
         threading.Thread(target=read_stdin, daemon=True).start()
     else:
         from .voice import VoiceListener
-        device = int(args.device) if args.device and args.device.isdigit() else args.device
+        device = device_arg
+        if isinstance(device, str) and device.isdigit():
+            device = int(device)
         ptt = None
         if settings["push_to_talk"]:
             from .ptt import ButtonState, PushToTalkGate
@@ -194,7 +221,7 @@ def main(argv=None) -> int:
             button.start()
             ptt = (PushToTalkGate(tail_seconds=settings["ptt_tail_seconds"]), button.is_held)
             print(f"Push-to-talk on {settings['push_to_talk']}: hold it while you make a call.")
-        VoiceListener(args.model, commands.grammar(data, settings["require_enemy"]),
+        VoiceListener(model, commands.grammar(data, settings["require_enemy"]),
                       controller.on_text, device, ptt).start()
         first = "'enemy <alias>'" if settings["require_enemy"] else "an alias"
         print(f"Listening. Say {first}, 'cancel <alias>', 'undo', or 'new round'.")
