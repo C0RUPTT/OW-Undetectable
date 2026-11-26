@@ -32,7 +32,9 @@ microphone. Recognition runs offline and audio is never saved.
      "phone": true
    }
    ```
-   Find your mic's number with `python -m ow_assist --list-devices` (use the `MME` one).
+   Find your mic's number with `run --list-devices` (use the `MME` one).
+   You can use words from its name instead of the number, like `"device": "Yeti MME"`.
+   That keeps working when plugging in other devices changes the numbers.
 
 ## Every day
 
@@ -108,7 +110,7 @@ gives your PC a new one.
 |---|---|
 | a cooldown's name (`nade`, `sleep`, `recall`...) | starts that cooldown timer |
 | an ult's name (`nano`, `gravity`, `blade`...) | marks the ult as used, then counts up the time since |
-| `enemy <alias>` | same as the alias alone |
+| `no <alias>` / `enemy <alias>` | same as the alias alone ("no nade") |
 | `cancel <alias>` | removes that timer |
 | `undo` | reverts your last call |
 | `reset` / `new round` | clears everything |
@@ -171,9 +173,10 @@ recognizer's confidence from 0 to 1. Things to try, in order:
 
 ## Why these abilities
 
-The ones on by default are picked for Tracer, Sojourn, Genji and Cassidy: the
-enemy cooldowns that stop your dive (sleep, cryo, recall) or save your target
-(suzu, lamp, grip, nade's anti-heal decides duels).
+The ones on by default are picked for Tracer and Sojourn: the enemy cooldowns
+that stop your dive or kill you (sleep, cryo, magnet), save your target (suzu,
+lamp, grip; nade's anti-heal decides duels), or let an enemy Tracer escape
+(recall).
 
 > **The cooldown numbers are unverified estimates.** Time them in a custom game
 > and put the right ones in `my_settings.json`, by any of the ability's names:
@@ -193,8 +196,8 @@ Set any of these in `my_settings.json`.
 - `min_confidence`: calls the recognizer is less sure of than this (0 to 1)
   are skipped. `0` keeps everything. Use the numbers on the `heard:` lines to
   pick a value.
-- `require_enemy`: when `true`, only "enemy nade" starts a timer, never plain
-  "nade". This stops chat with your team from setting off timers.
+- `require_enemy`: when `true`, only "no nade" or "enemy nade" starts a timer,
+  never plain "nade". This stops chat with your team from setting off timers.
 - `speech_rate`: how fast callouts are spoken.
 - `window_topmost`: keeps the optional window above other windows.
 - `phone_port`: the port the phone view uses.

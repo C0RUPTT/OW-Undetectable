@@ -13,7 +13,7 @@ MY_SETTINGS = ROOT / "my_settings.json"
 DEFAULT_HISTORY = ROOT / "userdata" / "history.sqlite3"
 
 # Words the command parser owns; aliases may not use them.
-RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their",
+RESERVED_WORDS = {"undo", "reset", "new", "round", "cancel", "enemy", "their", "no",
                   "gg", "goal", "record"}
 
 DEFAULT_SETTING_VALUES = {

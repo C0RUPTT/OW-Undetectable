@@ -223,7 +223,7 @@ def main(argv=None) -> int:
             print(f"Push-to-talk on {settings['push_to_talk']}: hold it while you make a call.")
         VoiceListener(model, commands.grammar(data, settings["require_enemy"]),
                       controller.on_text, device, ptt).start()
-        first = "'enemy <alias>'" if settings["require_enemy"] else "an alias"
+        first = "'enemy <alias>' or 'no <alias>'" if settings["require_enemy"] else "an alias"
         print(f"Listening. Say {first}, 'cancel <alias>', 'undo', or 'new round'.")
 
     if not args.window:

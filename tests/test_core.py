@@ -355,3 +355,11 @@ def test_cooldown_override_by_alias():
     assert data.get("tracer_recall").cooldown == 13.5
     with pytest.raises(DataError, match="positive"):
         load_abilities(cooldowns={"sleep": 0})
+
+
+def test_no_prefix_calls_ability(data):
+    assert commands.parse("no nade", data) == Command("use", "ana_nade")
+    assert commands.parse("no sue zoo", data) == Command("use", "kiriko_suzu")
+    assert commands.parse("cancel no nade", data) == Command("cancel", "ana_nade")
+    assert "no nade" in commands.grammar(data)
+    assert "no nade" in commands.grammar(data, require_enemy=True)

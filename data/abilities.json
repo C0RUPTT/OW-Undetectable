@@ -24,7 +24,7 @@
     {"id": "doom_block", "kind": "cooldown", "hero": "Doomfist", "name": "Power Block", "aliases": ["block", "power block"], "cooldown": 7, "starts": "on_use", "enabled": false},
     {"id": "ram_nemesis", "kind": "cooldown", "hero": "Ramattra", "name": "Nemesis Form", "aliases": ["nemesis"], "cooldown": 8, "starts": "on_use", "enabled": false},
     {"id": "jq_shout", "kind": "cooldown", "hero": "Junker Queen", "name": "Commanding Shout", "aliases": ["shout"], "cooldown": 15, "starts": "on_use", "enabled": false},
-    {"id": "cass_nade", "kind": "cooldown", "hero": "Cassidy", "name": "Magnetic Grenade", "aliases": ["magnet", "mag nade"], "cooldown": 10, "starts": "on_use", "enabled": false},
+    {"id": "cass_nade", "kind": "cooldown", "hero": "Cassidy", "name": "Magnetic Grenade", "aliases": ["magnet", "mag nade"], "cooldown": 10, "starts": "on_use", "enabled": true},
     {"id": "cass_roll", "kind": "cooldown", "hero": "Cassidy", "name": "Combat Roll", "aliases": ["combat roll"], "cooldown": 6, "starts": "on_use", "enabled": false},
     {"id": "mei_wall", "kind": "cooldown", "hero": "Mei", "name": "Ice Wall", "aliases": ["ice wall"], "cooldown": 12, "starts": "on_use", "enabled": false},
     {"id": "soldier_field", "kind": "cooldown", "hero": "Soldier: 76", "name": "Biotic Field", "aliases": ["biotic field", "soldier field"], "cooldown": 15, "starts": "on_use", "enabled": false},

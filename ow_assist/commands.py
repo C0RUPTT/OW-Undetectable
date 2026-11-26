@@ -5,7 +5,9 @@ from dataclasses import dataclass
 
 from .data import AbilityData, _normalize
 
-FILLERS = ("enemy ", "their ")
+# "no nade" = their nade is gone, same as calling "nade".
+FILLERS = ("enemy ", "their ", "no ")
+PREFIXES = ("enemy", "no")  # the ones the recognizer listens for
 NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
            "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
 RESULTS = {"gg win": "win", "gg loss": "loss", "gg draw": "draw"}
@@ -52,13 +54,14 @@ def parse(text: str, data: AbilityData) -> Command | None:
 def grammar(data: AbilityData, require_enemy: bool = False) -> list[str]:
     """Every phrase the recognizer is allowed to hear. Fixed list = fast and accurate.
 
-    With require_enemy, a bare alias isn't in the list, so only "enemy <alias>" starts a
-    timer and ordinary chat is much less likely to trigger one.
+    With require_enemy, a bare alias isn't in the list, so only "enemy <alias>" or
+    "no <alias>" starts a timer and ordinary chat is much less likely to trigger one.
     """
     phrases = {"undo", "reset", "new round", "record", "goal off", "gg loss tilted", *RESULTS}
     phrases.update(f"goal {n} games" for n in NUMBERS)
     for alias in data.alias_map:
-        phrases.update({f"enemy {alias}", f"cancel {alias}"})
+        phrases.update(f"{p} {alias}" for p in PREFIXES)
+        phrases.add(f"cancel {alias}")
         if not require_enemy:
             phrases.add(alias)
     return sorted(phrases) + ["[unk]"]
