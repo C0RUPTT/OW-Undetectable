@@ -6,6 +6,7 @@
     {"id": "kiriko_suzu", "kind": "cooldown", "hero": "Kiriko", "name": "Protection Suzu", "aliases": ["suzu", "sue zoo", "suzy"], "cooldown": 14, "starts": "on_use", "enabled": true},
     {"id": "bap_lamp", "kind": "cooldown", "hero": "Baptiste", "name": "Immortality Field", "aliases": ["lamp"], "cooldown": 20, "starts": "on_use", "enabled": true},
     {"id": "lw_grip", "kind": "cooldown", "hero": "Lifeweaver", "name": "Life Grip", "aliases": ["grip"], "cooldown": 18, "starts": "on_use", "enabled": true},
+    {"id": "mizuki_chain", "kind": "cooldown", "hero": "Mizuki", "name": "Binding Chain", "aliases": ["chain", "binding chain"], "cooldown": 12, "starts": "on_use", "enabled": true},
     {"id": "tracer_recall", "kind": "cooldown", "hero": "Tracer", "name": "Recall", "aliases": ["recall", "tracer recall"], "cooldown": 12, "starts": "on_use", "enabled": true},
     {"id": "mei_cryo", "kind": "cooldown", "hero": "Mei", "name": "Cryo-Freeze", "aliases": ["cryo"], "cooldown": 12, "starts": "on_use", "enabled": true},
     {"id": "sombra_tp", "kind": "cooldown", "hero": "Sombra", "name": "Translocator", "aliases": ["teleport", "sombra teleport"], "cooldown": 7.5, "starts": "on_use", "enabled": false},

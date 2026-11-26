@@ -174,9 +174,9 @@ recognizer's confidence from 0 to 1. Things to try, in order:
 ## Why these abilities
 
 The ones on by default are picked for Tracer and Sojourn: the enemy cooldowns
-that stop your dive or kill you (sleep, cryo, magnet), save your target (suzu,
-lamp, grip; nade's anti-heal decides duels), or let an enemy Tracer escape
-(recall).
+that stop your dive or kill you (sleep, magnet, chain), save your target (suzu,
+lamp, grip, cryo; nade's anti-heal decides duels), block your damage (deflect),
+or let an enemy Tracer escape (recall).
 
 > **The cooldown numbers are unverified estimates.** Time them in a custom game
 > and put the right ones in `my_settings.json`, by any of the ability's names:
@@ -191,6 +191,8 @@ Set any of these in `my_settings.json`.
 
 - `call_lag_seconds`: how many seconds are subtracted from each timer,
   because you speak after the ability is used.
+- `early_callout_seconds`: says "X is up" this many seconds before it's
+  actually back, so it's ready by the time you engage. Default 1.
 - `fire_on_partial`: acts on a call before you finish speaking, which is
   faster but misfires more. Off by default.
 - `min_confidence`: calls the recognizer is less sure of than this (0 to 1)

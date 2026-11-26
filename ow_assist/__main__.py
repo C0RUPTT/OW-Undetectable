@@ -22,7 +22,8 @@ class Controller:
         self.settings = settings
         self.speaker = speaker
         self.log = log
-        self.tracker = Tracker(data, settings["call_lag_seconds"])
+        self.tracker = Tracker(data, settings["call_lag_seconds"],
+                               settings.get("early_callout_seconds", 0))
         self._lock = threading.Lock()
         self._fired_partial: str | None = None
         self.last_heard = ""

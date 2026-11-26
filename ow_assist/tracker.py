@@ -22,9 +22,11 @@ class Status:
 
 
 class Tracker:
-    def __init__(self, data: AbilityData, call_lag: float = 0.0):
+    def __init__(self, data: AbilityData, call_lag: float = 0.0, early: float = 0.0):
+        """early: say "X is up" this many seconds before the cooldown is actually back."""
         self.data = data
         self.call_lag = call_lag
+        self.early = early
         self._ready_at: dict[str, float] = {}
         self._ult_used_at: dict[str, float] = {}
         self._history: list[tuple[dict, dict]] = []
@@ -61,7 +63,7 @@ class Tracker:
         if ability.kind == "ult":
             self._ult_used_at[ability.id] = used_at
         else:
-            self._ready_at[ability.id] = used_at + ability.recharge_seconds
+            self._ready_at[ability.id] = used_at + max(0.0, ability.recharge_seconds - self.early)
         return [Event("used", ability.id)]
 
     def poll(self, now: float) -> list[Event]:

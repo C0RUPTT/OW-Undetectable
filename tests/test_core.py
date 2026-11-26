@@ -365,3 +365,11 @@ def test_no_prefix_calls_ability(data):
     assert commands.parse("cancel no nade", data) == Command("cancel", "ana_nade")
     assert "no nade" in commands.grammar(data)
     assert "no nade" in commands.grammar(data, require_enemy=True)
+
+
+def test_early_callout(data):
+    cd = data.get("ana_sleep").cooldown
+    t = Tracker(data, call_lag=0, early=1)
+    t.apply(Command("use", "ana_sleep"), 0)
+    assert t.poll(cd - 1.1) == []
+    assert kinds(t.poll(cd - 1)) == [("ready", "ana_sleep")]

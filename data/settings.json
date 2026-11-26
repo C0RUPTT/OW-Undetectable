@@ -1,5 +1,6 @@
 {
   "call_lag_seconds": 0.5,
+  "early_callout_seconds": 1.0,
   "fire_on_partial": false,
   "min_confidence": 0.0,
   "require_enemy": false,
